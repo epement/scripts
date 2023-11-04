@@ -1,0 +1,139 @@
+#!/usr/bin/perl
+# Emacs file vars -*- mode:cperl; tab-width:4; indent-tabs-mode:nil -*-
+#
+# filename: delx
+#   author: Eric Pement
+#     date: 2018-12-19 13:40:48 (UTC-0500)
+#
+use strict;
+# use warnings;
+use Cwd;
+use Getopt::Long;
+Getopt::Long::Configure ("bundling");
+my $version = '1.0';
+my @filelist = ();
+my ($del_dir, $help, $dry_run, $quiet, $verbose);
+GetOptions('d|del-dir'  => \$del_dir,
+           'h|help'     => \$help,
+           'n|dry-run'  => \$dry_run,
+           'q|quiet'    => \$quiet,
+           'v|verbose'  => \$verbose,
+) or show_help() && exit;
+
+if ( $help ) {
+    show_help();
+    exit;
+}
+
+# require 2 arguments
+unless ( exists $ARGV[1] && defined $ARGV[1] ) {
+    print "ERROR: Need one directory and at least one file on the command line.\n\n";
+    show_help();
+    exit 1;
+}
+
+my $dir = shift;     # get the directory before expanding args
+
+#----[ subs ]--------------------------------------------------
+sub show_help {
+    my $s0 = $0;
+    $s0 =~ s|^.*/||;     # delete to last slash
+    print <<"END_OF_HELP";
+$s0 - Perl file deleter, v$version
+
+Usage:  $s0 [-options] directory_name file1* [file2* file3* ... ]
+
+Options:
+  -d, --del-dir   Delete the directory also
+  -h, --help      Show this help
+  -n, --dry-run   Do nothing; just show results of proposed action
+  -q, --quiet     Quiet mode; do not display any results
+  -v, --verbose   Show more details
+
+2 params required: a Directory, followed by one or more filenames. All files
+on the command tail will be deleted, but the Directory will not be deleted.
+Option -d or --del-dir will delete the directory also.
+
+Shell wildcards permitted in filename patterns: *, ?, [0-9], [!a-g], etc.
+
+Use option -n as a "dry run" before performing the actions. Option switches
+can be grouped in any order (that is, "-n -v" == "-nv" == "-vn").
+END_OF_HELP
+}
+
+#----[ main ]--------------------------------------------------
+my ($found, $deleted, $errs, $okay) = (0, 0, 0, 0);
+my $original_dir = cwd();
+
+unless ( -d $dir ) {
+    # Show the error, even if the --quiet flag is on
+    print "ERROR: Directory '$dir' does not exist! \n";
+    exit 1;
+}
+
+# Descend into the directory, THEN glob the file patterns
+chdir "$dir" or die "Unable to cd to $dir: $!";
+
+@filelist = map { glob } @ARGV;   # this expands wildcards
+
+if ( $verbose ) {
+    print "Verbose output:\n";
+    print "  Directory name:     $dir\n";
+    print "  Command-line args:  @ARGV\n";
+    print "  After expansion:    @filelist\n\n";
+}
+
+foreach my $file ( @filelist ) {
+    if ( -f $file ) {
+        $found++;
+        if ( $verbose or $dry_run ) {
+            # Do not print this if normal or if --quiet
+            printf "%s file: %s ...\n",
+                $dry_run ? "Dry-run would delete" : "Deleting", $file;
+        }
+        unless ( $dry_run ) {
+            my $count = unlink $file;
+            if ( $count ) {
+                $deleted++;
+            }
+            else {
+                warn "Cannot delete $file: $!";
+            }
+        }
+    }
+    else {
+        # Show the error, even if the --quiet flag is on
+        printf "ERR: File does not exist: %s\n", $file;
+        $errs++;
+    }
+}
+
+# exit the directory in order to delete it
+chdir "$original_dir" or die "Unable to cd to $original_dir: $!";
+
+if ( $del_dir ) {
+    if ( $verbose or $dry_run ) {
+        # Do not print this if normal or if --quiet
+        printf "%s  dir: %s ...\n",
+            $dry_run ? "Dry-run would delete" : "Deleting", $dir;
+    }
+    unless ( $dry_run ) {
+        $okay = rmdir $dir;
+        warn "Cannot remove directory $dir: $!\n" unless $okay;
+    }
+}
+
+# print stats
+unless ( $quiet ) {
+    print "\n";
+    if ( $errs ) {
+        printf "%d %s where File is not found.\n",
+            $errs, $errs == 1 ? "error" : "errors";
+    }
+    printf "Total of %d %s found, %d deleted.\n",
+        $found, $found == 1 ? "file" : "files", $deleted;
+    print "Directory $dir deleted.\n" if $okay;
+    print "Dry run test, so no files or directories were deleted.\n" if $dry_run;
+}
+
+#----[ end of script ]----

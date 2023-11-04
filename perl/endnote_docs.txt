@@ -1,0 +1,362 @@
+		       ENDNOTE.AWK and ENDNOTE.PL
+
+      A Practical Method for Handling Endnotes in Text Files
+                          by Eric Pement
+
+   Academic writers often need note documentation in their files. In the
+editing process, it's nice to move, add, or delete paragraphs with note
+numbers without manually renumbering them as sentences and paragraphs are
+moved. Word processors like Microsoft Word permit users to edit note
+references, which are automatically renumbered when moved or deleted. Is
+something like this available to users with text editors like vi, vim,
+Emacs, Notepad++, or Visual Studio Code?
+
+   Yes! With your preferred plain text editor, you can create a source
+file with unnumbered note references and move them around, adding or
+deleting them without worry. At print time, the source document is run
+through a reformatting script which assigns sequential numbers to the
+note marks, gathers the notes themselves, and moves them to the end of
+the document where they are collected and printed with pagination.
+Endnotes can be separated by double spacing or single spacing, whichever
+you prefer.
+
+Vocabulary:
+
+   Note references are the digits which often appear as smaller, superior
+   numbers, but which may appear in '[square brackets]' in the text body.
+   In plain text, superior figures are not available.
+
+   Note Points are things which become note references after processing.
+
+   Notes are the documentation items themselves, which generally list an
+   author, title, year of publication, page numbers, etc., but which may
+   be words of explanation or abbreviated secondary references.
+
+   A Note Body is a note, prefixed by "#." or "##.", matching the
+   corresponding Note Point above it. A Note Body can contain full
+   sentences or paragraphs. It can also be a single line.
+
+   A Note Block is a group of sequential notes, delimited before and
+   after or else above and below by 2 consecutive square brackets, "[["
+   and "]]".
+
+
+A. How to Format Your Document
+
+   Within the paragraph, mark each future note reference by one of these
+placeholders: [#] or [##]. The placeholder is a left square bracket "[",
+one or two pound signs "#", and a right square bracket "]". The pound
+signs will be converted to 1, 2, 3, etc. when the file is processed. The
+pound signs only are markers; they do not control how big the number will
+be or can be. Each placeholder is a Note Point.
+
+[[
+##. You can use 1 to 4 pound signs. The number of pound signs has no
+bearing on how the numbers will look when the document is formatted.
+Numbering begins with 1, unless an option switch is used.
+
+##. Tip: If you expect to have less than 10 endnotes, use just one pound
+sign, [#]. If you expect to have less than 100, use two: [##].
+]]
+
+   Below any paragraph with Note Points, add the documentation items in
+the same order. Each note should be prefixed with "#." or "##." to match
+its corresponding Note Point. The notes for that paragraph go inside a
+Note Block delimited by '[[' and ']]', which may be in any of these
+formats:
+
+   (a) WITHIN THE PARAGRAPH. This format works well if your reference is
+very short.[##] Confirm that the square brackets "[[" and "]]" will appear
+[[ #. Short, like one-line short. ]]
+as the first and last characters of the line. In other words, a Note
+Block can literally be INSIDE a paragraph of body text. It does not have
+to be outside or after the paragraph.
+
+   (b) AT THE END OF THE PARAGRAPH. This format works well if you like to
+keep the note documentation immediately below the paragraph which refers
+to it.[##] You do not need a blank line between the paragraph and the
+Note Block. The line below is an example.
+[[ ##. Here, there is no blank line after the paragraph. ]]
+
+   (c) AFTER THE PARAGRAPH. Should you attempt to reformat the paragraph
+above, the "[[" markers from the Note Block would very likely be pulled
+up at the end of the word "example." This is bad, because ENDNOTE expects
+the "[[" and "]]" to be the first and last characters on a line.[##] So
+to overcome the consequences of a "reformat paragraph" command, you may
+prefer to place the Note Block in a separate paragraph with a blank line
+between them. ENDNOTE deletes the blank line automatically.
+
+[[
+##. Technically, ENDNOTE allows spaces or tabs to precede the "[["
+marker, and it permits trailing spaces or tabs to follow the "]]" marker,
+but no other characters may precede or follow these markers.
+]]
+
+   (d) W-A-A-Y AFTER THE PARAGRAPH. Though there is not much call for it,
+you are free to put the Note Block (wrapped in "[[" and "]]" markers)
+several paragraphs after the Note Point. This sort of defeats the main
+idea, which is to keep the Note Points and the Note Block close to each
+other while editing, but this option is available to you. ENDNOTE lets
+you edit your document in the way that works for you.
+
+Personally, I like the Note Block to be in example (c), one paragraph
+below the paragraph with the Note Points. However, a Note Block can occur
+almost anywhere (within reason).
+
+
+B. Details on Note Blocks
+
+   Inside a Note Block---a text block wrapped in "[[" and "]]"
+markers---each Note Body begins with optional whitespace (spaces or
+tabs), followed by 1 to 4 pound signs, followed by a period. That period
+is very important, because if it is missing, ENDNOTE will not consider
+this a new item for numbering.
+
+   The optional whitespace before each Note Body means that you do not
+need to begin the "##." flush left if you don't like it. You can indent
+if you want to.[##]
+
+[[
+    ##.  As you can see here.
+   (##) This item, because it has parentheses and no period, will be
+considered part of the preceding note. It will not be interpreted as
+a separate Note Body for auto-numbering.
+]]
+
+   If you decide to use the in-line form of Note Blocks,[##] the first
+[[ ##. The in-line forms look like this. ]]
+space after the "[[" is optional, and your numbered references will STILL
+appear flush left in the endnote section. However, if there is more than
+one space after the "[[" marker, the additional space will be copied over
+into the endnote section. Something to remember, or experiment with.
+
+   If you have multiple notes inside a Note Block, you can omit or keep
+blank lines between the notes. In other words, the following forms will
+produce identical output:
+
+   {{
+   ##. No blank lines between the Note Bodies.
+   ##. As you can see here.
+   }}
+
+   {{
+   ##. Blank lines between notes in a Note Block are ignored.
+
+   ##. Whether you keep them or not, it doesn't matter in the output,
+   }}
+
+   When the Note Blocks are collected and formatted for printing, one 
+blank line will be inserted between each separate endnote, even if there 
+are no blank lines in the Note Block itself.
+
+   To control whether blank lines appear between endnotes during
+formatting, the switch for "ssnotes" will remove that blank line.
+
+   What if your notes consist of several long paragraphs? Will they be
+stripped out or tampered with?
+
+   No. Within each individual note (that is, from the first line to the
+last line of each note), internal blank lines are kept intact. Only blank
+lines *between* notes that are affected. Blank lines *within* a
+multi-paragraph note are not affected.
+
+   Within a Note Block, ENDNOTE also supports nonprinting comment lines.
+If a line begins with ".." or "??" or "%" as the first character on the
+line, that line is not printed. This allows writers to add comments to
+themselves which do not appear in the output file.
+
+[[
+.. --------------------------------------------------------
+..   In fact, an entire Note Block can consist of nothing
+..   but nonprinting comments. You can remind yourself to
+..   look up a stray factoid while composing, and never
+..   see your comment in the output file.
+..
+..   Nonprinting comments MUST occur within Note Blocks.
+..   At least for right now.
+.. --------------------------------------------------------
+]]
+
+
+C. Details on Note Points
+
+   Note Points may go directly after a word, like this[##], or there can 
+be a space before the Note Point, like this. [##]
+
+[[
+##. Having no space before a Note Point keeps bracketed references from
+"wrapping" and floating to the left margin if a paragraph is reformatted.
+
+##. Having one space before a Note Point sometimes looks better. But if
+you're not watching, the Note Point will "wrap" to the left margin during
+paragraph reformatting.
+]]
+
+   ENDNOTE performs a single pass down the document, formatting and
+counting as it goes along. Therefore, it doesn't "know" until it reaches
+the end of file whether the number of Note Points equals the number of
+Note Bodies for the "Endnotes" section.
+
+   If there is a discrepancy between the total number of Note Points and
+the total number of Note Bodies, ENDNOTE issues an explanatory error
+message and quits. (This action can overridden by an option switch.)
+
+   If there is no mismatch, ENDNOTE prints this section header:
+
+      ---------
+      ENDNOTES:
+
+followed by the collected series of Note Bodies, which have been
+automatically numbered. The "[[" and "]]" markers are discarded.
+
+
+D. Option switches
+
+   The following options are available for ENDNOTE. The syntax differs
+depending on whether you are using awk or perl to run ENDNOTE. The
+switch names and functions, however, are the same.
+
+D.1. Define the string for Note Points
+
+   By default, Note Points in the text are indicated by 1 to 4 pound
+signs in square brackets. You may use something simpler and dispense with
+the square brackets. The switch `alt_np` (for "alternate note point
+string") can define a different string as the auto-incrementing note
+reference. You can use (for example) an asterisk, which will be
+interpreted as a literal string for this use.
+
+D.2. Omit blank lines between notes
+
+   By default, one blank line is automatically inserted after each Note
+Body (double-spacing between notes, which is not the same as
+double-spacing inside each note). If a switch is passed for `ssnotes`
+(single-spaced notes), the blank line is omitted.
+
+D.3. Define starting note number
+
+   By default, note numbering always begins with 1. If you split a
+document into multiple parts and want the notes for Part 2 to continue
+where Part 1 ended, ENDNOTE has a switch named `start` to begin numbering
+at any specified integer.
+
+D.4. Ignore mismatch between Note Points and Note Bodies
+
+   By default, ENDNOTE halts if the number of Note Bodies does not
+correspond with the number of Note Points. A switch named `ignore_errors`
+causes ENDNOTE to ignore mismatched notes in the body and the endnote
+section, printing the notes "as is" without halting. This switch can be
+helpful if you need to print a working draft and you don't care about
+mismatched notes.
+
+   This switch is also useful if you simply need to number items in a
+list. For example, you want a numbered list where you can rearrange items
+freely, and you don't need "endnotes" at all. Set `alt_np` to a simple
+string like '#' or '*', use `ignore_errors`, and ENDNOTE will replace
+each '#' or '*' with an incrementing number. If you need to, you can also
+use `start` to change the number which begins the list.
+
+
+E. Running ENDNOTE with Awk
+
+   You must install awk or perl to run ENDNOTE. If you are *only*
+interested in using ENDNOTE and have neither tool, awk is much easier to
+install and learn than Perl.
+
+   Awk is installed by putting one or a few files somewhere on the PATH
+where Windows can find it. ENDNOTE will run under either GNU awk
+(gawk.exe) or Michael Brennan's awk (mawk.exe).[##] If you have neither
+version, GNU awk (gawk) is a better choice than mawk because gawk has
+better internal help, gives helpful error messages, and has ongoing
+development and bug fixes.
+
+[[
+##. Recommended sites for awk and mawk, precompiled for Windows:
+ https://sf.net/projects/ezwinports/files/ - latest gawk-5.2*-bin.zip
+ https://klabaster.com/freeware.htm  - both gawk 4.4.4 and mawk here
+ https://delorie.com/djgpp/dl/ofc/dlfiles.cgi/current/v2gnu/ - gwk500b.zip
+
+GNU awk (gawk) is included with the Unix toolkit in Git For Windows at
+https://gitforwindows.org 
+]]
+
+   ENDNOTE for awk is available from http://www.pement.org/awk.htm
+
+   The syntax for the awk version of ENDNOTE is:
+
+   awk [-options] -f endnote.awk source_file >output_file
+
+SWITCH PLACEMENT. Note that if options are used, option switches must
+occur before the -f switch. Each option requires a separate -v switch.
+
+  Options:
+    -v alt_np='str'     # use 'str' (literal) as an alternate note point
+    -v ignore_errors=1  # ignore mismatched numbering in endnotes
+    -v ssnotes=1        # omit blank line between notes (default: 1 line)
+    -v start=n          # start numbering at 'n' instead of 1
+
+Example: to use the first two options, where the alternate Note Point
+string will be a single asterisk, use this syntax in Unix:
+
+   awk -v alt_np='*' -v ignore_errors=1 -f endnote.awk infile >outfile
+
+In Windows, replace the single quotes with double quotes:
+
+   awk -v alt_np="*" -v ignore_errors=1 -f endnote.awk infile >outfile
+
+
+F. Running ENDNOTE with Perl
+
+   Perl is a high-powered programming and "glue" language that is a
+favorite for programmers and sysadmins. The latest version is easy to
+find.[##] If you're running Unix or Linux, perl is already installed.
+
+[[
+##. Recommended sites for perl:
+ http://www.strawberryperl.com - for Windows 32
+ http://www.activestate.com/activeperl/ - free and commercial versions
+ http://www.perl.org/get.html - for Unix/Linux, Mac OS X, Windows
+]]
+
+   ENDNOTE for perl is available from http://www.pement.org/perl.htm
+Additional documentation for ENDNOTE for perl is available by running the
+command "perldoc [/your/path/to/]endnote.pl" from a shell prompt.
+
+   The syntax for the perl version of ENDNOTE is:
+
+   perl [-s] endnote.pl [-options] source.txt >output.txt
+
+Switch placement. Note that if any options are used, the -s must also be
+present. The -s must come *before* the script name ("endnote.pl"), but
+the options (prefixed with a hyphen) must come *after* the script name.
+
+  Options:
+    -alt_np='str'   # use 'str' (literal) as an alternate note point
+    -ignore_errors  # ignore mismatched numbering in endnotes
+    -ssnotes        # omit blank line between notes (default: 1 line)
+    -start='n'      # start numbering at 'n' instead of 1
+
+
+G. Acknowledgements
+
+   Finally, I must give credit where credit is due. Key ideas for ENDNOTE
+were adopted from "wsNOTE" by Eric Meyer, the author of VDE (a 16-bit DOS
+text editor, now freeware).[##] wsNOTE was a CP/M and DOS utility for
+handling both footnotes and endnotes in WordStar files, at a time when
+WordStar supported neither.[##] wsNOTE generated WordStar-specific
+output. I have adopted his system to perform a similar task with plain
+ASCII files, but my system is only for endnotes, not footnotes.
+
+[[
+##. VDE can be obtained from https://archive.org/details/vde-197
+
+##. Documentation for wsNOTE is currently at
+http://df.lth.se/~pi/cpm/files/ftp.mayn.de/pub/cpm/archive/wstar/wsnot134/wsnote.doc.txt
+]]
+
+-- 
+The ENDNOTE perl and awk scripts were written by Eric Pement in 2002.
+This document was recently updated in November 2023.
+
+[[
+%  Of related interest, see http://spec-ops.github.io/html-note
+]]

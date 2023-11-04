@@ -1,0 +1,159 @@
+#!/bin/bash
+#
+# filename: exp
+#   author: Eric Pement
+#     date: 2023-11-04 13:50:42 (UTC-0400)
+# requires: bc, perl, fold, sed
+#
+# history:
+#  2.9: check for required files
+#  2.8: added comment for sqrt
+VERSION="2.9"
+PRG=`basename $0`
+
+# Full path to these programs must be defined here
+fold='/bin/fold'
+perl='/bin/perl'
+sed='/bin/sed'
+bc='/bin/bc'    # binary calculator. MSYS can use the Cygwin version of bc
+
+function usage {
+  cat <<EOF
+$PRG - a high-precision command-line calculator (v$VERSION)
+
+Syntax:   $PRG [-options] MATH_EXPRESSION
+Options:
+   -c     commify (add commas every 3 digits and wrap long lines)
+   -h     issue this help message
+   -p N   change precision to N decimal places (default: 5)
+   -w N   change output width in wrapping long lines (default: 80)
+
+Operators:
+    ^      exponentiation             /    division
+  * or x   multiplication             %    modulus (remainder)
+  + or -   add, subtract             sqrt  square root
+
+Operator precedence:   (...)   ^   * x   /   %   +   -   sqrt(N)
+
+Requires a math statement on the command line that can be parsed
+by "bc". Use quotes or backslashes if "*" or parens "(..)" occur
+on the command line. Option switches to $PRG must appear before
+the math expression. Commas in the expression are OK (ignored).
+Remainder (modulus) is shown by "%", e.g., "19%4" returns 3.
+
+Examples:
+  $PRG 2^16                        # prints 65536
+  $PRG -p 10 355 / 113             # prints 3.1415929203, better pi
+  $PRG '123,456.7890123 * 99,999'  # prints 12345555444.4409877
+  $PRG -c '123456.7890123 x 99999' # prints 12,345,555,444.4409877
+  $PRG -c 5^5^6                    # prints 183 lines of data
+  $PRG 'sqrt (41.5^2 + 12^2)'      # parens required for sqrt(n)
+
+EOF
+}
+
+# Trivia: Note that 355/113 is pi, correct to 6 decimal places, much
+# more accurate than 22/7, which is only accurate to 2 decimal places.
+
+# several ways to ask for help
+if [[  $# -eq 0 || $1 = "-?" || $1 = "--help"  ]]; then
+    usage
+    exit
+fi
+
+# set defaults
+SCALE=5
+WIDTH=80
+
+# check required programs
+[[ -x $bc ]]   || { echo "FATAL: $bc not found or not executable!"; exit 1; }
+[[ -x $fold ]] || { echo "FATAL: $fold not found or not executable!"; exit 1; }
+[[ -x $perl ]] || { echo "FATAL: $perl not found or not executable!"; exit 1; }
+[[ -x $sed ]]  || { echo "FATAL: $sed not found or not executable!"; exit 1; }
+
+# parse options. Putting a colon at the head of the string causes getopts to
+# run in silent mode. Options p and w require arguments
+while getopts ":chp:w:" opt; do
+  case $opt in
+    c) COMMIFY=1
+       ;;
+    h) usage
+       exit
+       ;;
+    p) SCALE=${OPTARG}
+       ;;
+    w) WIDTH=${OPTARG}
+       ;;
+    *) echo "Unrecognized option switch: -$OPTARG"
+       usage
+       exit 1
+       ;;
+  esac
+done
+
+shift $(($OPTIND - 1))
+
+# if modulus (%) is in the command line, set the $SCALE to zero
+[[ "$*" = *%* ]] && SCALE=0
+
+# strip commas from input (they cause errors), convert 'x' into asterisk
+INPUT=$(echo "$*" | $sed 's/,//g; s/x/*/g' )
+
+# echo DIAG: scale = "[$SCALE]", INPUT = "[$INPUT]", WIDTH = "[$WIDTH]"
+# echo DIAG: star is "[$*]"
+
+if (( $COMMIFY )); then
+  echo "scale=$SCALE; $INPUT" |
+   BC_LINE_LENGTH=262144 $bc | $perl -ne '
+    $line = reverse $_;
+    $line =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/g;
+    $line = reverse $line;
+    $line =~ s/^(\d+),/" " x eval(3 - length($1)) . "$1,"/e;
+    print "$line\n";
+  ' | $fold -$WIDTH
+else
+  echo "scale=$SCALE; $INPUT" | BC_LINE_LENGTH=$WIDTH $bc
+fi
+
+# perl commify script explanation
+#--------------------------------------------------------------
+# $line = reverse $_;
+#    from: "temperature is 1234567890.1234567 degrees"
+#      to: "seerged 7654321.0987654321 si erutarepmet"
+#
+# $line =~ s/ (\d\d\d)     # 3 matching digits
+#             (?=\d)       # noncapturing positive look-ahead
+#             (?!\d*\.)    # noncapturing negative look-ahead
+#          /$1,/gx;        # add comma after group $1 
+#
+#    First 2 groups (...)(..) will match 4 consecutive digits.
+#    Last group (?!\d*\.) prevents the regex from matching any digits
+#    BEFORE any decimal point. It can only match digits AFTER a decimal.
+#    from: "seerged 7654321.0987654321 si erutarepmet"
+#      to: "seerged 7654321.098,765,432,1 si erutarepmet"
+# 
+# $line = reverse $line;
+#    from: "seerged 7654321.098,765,432,1 si erutarepmet"
+#      to: "temperature is 1,234,567,890.1234567 degrees"
+#
+# $line =~ s/^(\d+),/" " x eval(3 - length($1)) . "$1,"/e;
+#    For every group of "ddd,", add either 1 or 2 spaces to the BOL, so
+#    the commas and groups of 3 always line up vertically. Example:
+#
+#       $ exp -c 123000 x 10
+#         1,230,000               # 2 spaces added
+#       $ exp -c 123000 x 100
+#        12,300,000               # 1 space added
+#       $ exp -c 123000 x 1000
+#       123,000,000               # 0 spaces added
+#
+#   This ALSO makes commas line up when displaying very long results. Example:
+#       $ exp -c 123 ^ 100
+#    97,838,805,977,257,474,352,566,705,351,629,014,033,137,938,449,734,350,966,526,
+#   074,342,064,414,099,511,156,930,426,773,522,415,958,061,389,200,997,320,437,636,
+#   836,296,142,253,482,249,885,877,442,849,062,074,323,416,253,749,444,792,245,426,
+#   920,843,456,133,929,113,701,176,246,001
+#
+# print "$line\n";     # print the results to the screen, to be followed by FOLD
+#
+#---[ end of file ]---

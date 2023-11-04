@@ -1,0 +1,38 @@
+# Archives #
+*.7z
+*.jar
+*.pax
+*.rar
+*.tar
+*.zip
+*.ZIP
+
+# Backup #
+*.bak
+*~
+\#*\#
+.\#*
+
+# Compressed files #
+*.bz2
+*.gz
+*.xz
+*.Z
+
+# Images #
+*.bmp
+*.gif
+*.jpeg
+*.jpg
+*.png
+*.PNG
+
+# Local temp files #
+temp*
+test*
+
+# Other #
+*.pdf
+*.docx
+*.xlsx
+*.pptx

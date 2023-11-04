@@ -1,0 +1,142 @@
+#!/bin/bash
+#  -*- Emacs: mode:shell-script; tab-width:4; indent-tabs-mode:nil; -*-
+#
+# filename: list_each_field
+#   author: Eric Pement
+#     date: 2021-01-28 16:04:18 (GMT-0500)
+#
+prog=$(basename $0)
+vers="1.22"
+
+# if Solaris, use nawk instead of awk
+if [[ `uname` = "SunOS" ]]; then
+    alias awk=/usr/bin/nawk
+    (( ${BASH_VERSINFO[0]} )) && shopt -s expand_aliases
+fi
+
+function usage {
+    cat <<END_OF_TEXT
+$prog v$vers -
+  Given 1 or more lines of delimited input (e.g., CSV file), put each field
+  on a separate line and prefix the line with the correct field number.
+  - Fields containing only spaces or tabs are treated as empty fields.
+  - This tool does not handle embedded or quoted delimiters. To do that, use
+  GNU awk with FPAT; perl with Text::CSV; or python with the csv() library.
+
+Usage:  $prog [-v options] [delimited_data]
+
+Options:  -v delim='x'      # use 'x' for delimiter instead of comma
+          -v hideEmpty=1    # do not show empty fields or blank lines
+          -v numberLines=1  # include line numbers with output
+          -v startWith=0    # number fields beginning with 0 instead of 1
+
+      Use "\t", "\f", "\v", "\a" for TAB (^I), FF (^L), VT (^K), BEL (^G)
+
+Example:
+  $ echo aXb | tr "X" "\t" | $prog -v delim="\t"
+  [0001]: <a>
+  [0002]: <b>
+
+  $ echo 'foo,  bar, ,,ham and eggs   , ,  ' | $prog
+  [0001]: <foo>
+  [0002]: <  bar>
+  [0003]: [empty]
+  [0004]: [empty]
+  [0005]: <ham and eggs   >
+  [0006]: [empty]
+  [0007]: [empty]
+
+  $ echo 'foo,  bar, ,,ham and eggs   , ,  ' | $prog -v hideEmpty=1 -v startWith=0
+  [0000]: <foo>
+  [0001]: <  bar>
+  [0004]: <ham and eggs   >
+
+END_OF_TEXT
+}
+
+case $1 in
+    [?] | -[h?] | --help)    usage
+                             exit 0 ;;
+esac
+
+
+# If help is not requested, execute awk/nawk and never return ...
+exec awk -e '
+#
+BEGIN {
+    # if a particular delimiter is defined, use it. Else, use the comma
+    FS = delim ? delim : ","
+
+    # default: show empty fields
+    if ( hideEmpty==0 && hideEmpty=="" ) {
+        # variable hideEmpty was not used as a command-line option
+        hideEmpty = 0
+    }
+    else if ( hideEmpty=="" ) {
+        print "ERROR: \"hideEmpty\" was used on the command line, but it cannot be blank"
+        exit 1
+    }
+
+    # default: omit line numbers
+    if ( numberLines==0 && numberLines=="" ) {
+        numberLines = 0
+    }
+    else if ( numberLines=="" ) {
+        print "ERROR: \"numberLines\" was used on the command line, but it cannot be blank"
+        exit 1
+    }
+
+    # if startWith was not defined, set subtract to 1
+    if ( startWith==0 && startWith=="" ) {
+        subtract = 0
+    }
+    else if ( startWith=="" ) {
+        print "ERROR: \"startWith\" was used on the command line, but it cannot be blank"
+        exit 1
+    }
+    else {
+        subtract = 1
+    }
+}
+
+NF == 0 {
+    if (hideEmpty)
+        next
+    else
+        printf "[Line %02i]:   [blank]\n\n", NR
+}
+
+NF > 0 {
+    for ( i=1; i <= NF; i++ ) {
+
+        j = i - subtract             # handle requests to start at 0
+
+        if (hideEmpty) {             # skip empty fields
+            if ( $i ~ /^[ \t]*$/ ) {
+                continue
+            }
+            else {
+                if (numberLines)
+                    printf "[L%02i.F%04i]: <%s>\n", NR, j, $i
+                else
+                    printf "[%04i]: <%s>\n", j, $i
+            }
+        }
+        else {                       # print empty fields also
+            if ( $i ~ /^[ \t]*$/ ) {
+                if (numberLines)
+                    printf "[L%02i.F%04i]: [empty]\n", NR, j
+                else
+                    printf "[%04i]: [empty]\n", j
+            }
+            else {
+                if (numberLines)
+                    printf "[L%02i.F%04i]: <%s>\n", NR, j, $i
+                else
+                    printf "[%04i]: <%s>\n", j, $i
+            }
+        }
+    }
+    printf "\n"
+} ' "$@"
+#---end of script ---

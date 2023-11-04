@@ -1,0 +1,41 @@
+#!/bin/bash
+# filename: paragrep
+#     date: 2023-11-04 14:51:03 (UTC-0400)
+version="1.1"
+
+if [[ -z "$1" || "$1" == '--help' || $1 = -h* ]]; then
+
+    cat <<EOT
+paragrep v${version} - perl script to search within paragraphs
+   
+Syntax: paragrep [-i] "pattern" [file1 file2 ...]
+
+Paragraphs are separated by 1 or more blank lines. If the expression occurs
+within the paragraph, show the entire paragraph. You can use ^ and $ to mark
+lines within the paragraph, and any perl expressions. The metacharacter "."
+will match any character, including a newline.
+
+  -i       case-insensitive match
+  --help   show this help message
+
+See also:
+ 'perldoc' followed by any of these documentation files:
+  perlre, perlreref (quick reference), perlrequick, perlrebackslash, perlfaq6
+
+EOT
+
+elif [[ "$1" == '-i' ]]; then
+
+   shift
+   PATTERN=$1
+   shift
+   perl -00 -ne "print if /$PATTERN/msi" "$@"
+
+else
+
+   PATTERN=$1
+   shift
+   perl -00 -ne "print if /$PATTERN/ms" "$@"
+
+fi
+#----[ end of file ]----

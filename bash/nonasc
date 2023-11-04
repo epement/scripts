@@ -1,0 +1,316 @@
+#!/bin/bash
+#  -*- Emacs: mode:shell-script; tab-width:4; indent-tabs-mode:nil; -*-
+#
+# filename: nonasc
+#   author: eric.pement
+#     date: 2015-04-06 13:08:08 (GMT-0400)
+# requires: od, sed, ANSI-aware console
+#
+set -o pipefail
+ERRORS=0
+VERSION="2.1b"
+PROGRAM=$(basename $0)
+sed_script=/tmp/_non-ascii.sed
+bad_chars=/tmp/_illegal_chars.out
+files_processed=0
+opt_remark="Switches:"
+function usage {
+    cat <<EOF
+$PROGRAM v$VERSION -
+  Look for non-printable chars in input. Valid chars are regex[ -~] (0x20-0x7E),
+  TAB, CR, and LF. Control codes or graphic chars are considered "non-ASCII".
+  Input files are not changed. Exit code 0 if pure ASCII or nonzero otherwise.
+
+Usage: $PROGRAM [-switches] [file1 file2* ...]
+  Multiple files are allowed. If filename is omitted, read from standard input.
+  If no switches are used, look for non-printing chars and display the first 2
+  lines of non-printing chars, if any. Hits are shown as yellow-on-red.
+
+Switches:
+   -d   Dump the ENTIRE input file in both hex and ASCII to the screen
+        WITHOUT CHECKING FOR INVALID CHARS. Works on pure binary files.
+        Long files should be piped through a file pager (e.g., "less").
+        Use the -x switch to limit the output to NN lines.
+        -d is not compatible with -r or -t; if both are used, -d prevails.
+
+   -r   Include CR  (Ctrl-M, \\015, \\d13, 0x0D) as invalid char.
+   -t   Include TAB (Ctrl-I, \\011, \\d09, 0x09) as invalid char.
+   -z   Allow Ctrl-Z (0x0A), but only at EOF.
+
+ -x NN  Print a maximum of NN lines of output for each file.
+        If -d is used, display the first NN lines of hex/ASCII output.
+        If -d is omitted, display a max of NN lines of invalid input.
+
+ -h, -?, --help    Display this help message
+
+EOF
+}
+
+case $1 in
+    [?] | -[h?] | --help)   usage
+                            exit 0 ;;
+esac
+
+# defaults. Some may be overridden by command-line options
+num="2"               # max number of error lines to print
+
+# ANSI escape codes. Sequence is:  ESC [ {attribute}; {text-color}; {bkgd-color} m
+# Attributes: 00=none  01=bold 04=underscore 05=blink 07=reverse 08=concealed 
+# Text color: 30=black 31=red  32=green 33=yellow 34=blue 35=magenta 36=cyan 37=white
+# Bkgd color: 40=black 41=red  42=green 43=yellow 44=blue 45=magenta 46=cyan 47=white
+red=$'\e[1;31m'     # shift into bright red on default background
+yeR=$'\e[1;33;41m'  # shift into bright yellow on Red background
+yeD=$'\e[1;33m'     # shift into bright yellow on Default background
+def=$'\e[0m'        # back to default
+
+# parse options. Leading : in "opt-string" suppresses getopts errors.
+while getopts ":drtx:z" opt; do
+    case $opt in
+        d)  doDump=TRUE
+            ;;
+        r)  no_cr=d
+            ;;
+        t)  no_tab=9
+            and_no=' (and no TABs!)'
+            ;;
+        x)  max=TRUE
+            num=$OPTARG
+            ;;
+        z)  z_at_eof=TRUE
+            ;;
+       \?)  printf -- "${red}ERROR!${def} Invalid option: ${yeR}$1${def} \n"
+            printf -- "-------------------------\n\n"
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+shift $(($OPTIND - 1))
+
+# set variables needed for comment later
+if [[ $no_cr == "d" ]]; then
+    rem_ON=1
+    opt_remark="$opt_remark -r (CRs),"
+fi
+
+if [[ $no_tab == "9" ]]; then
+    rem_ON=1
+    opt_remark="$opt_remark -t (tabs),"
+fi
+
+if [[ $z_at_eof == "TRUE" ]]; then
+    rem_ON=1
+    opt_remark="$opt_remark -z (Ctrl-Z at EOF),"
+fi
+
+if [[ $max == "TRUE" ]]; then
+    rem_ON=1
+    opt_remark="$opt_remark -x$num (max lines),"
+fi
+
+opt_remark=${opt_remark%,}      # del trailing comma
+
+# getting input from standard input or filenames?
+if   [[ -z $1 ]]; then
+    source='[stdin]'
+elif [[ -f $1 ]]; then
+    source="$@"
+elif [[ -d $1 ]]; then
+    echo "${red}ERROR!${def} \"$1\" is a directory, not a file. Exiting ..."
+    exit 1
+else
+    # Might be a device, a character-special file, a socket, or something else.
+    echo "${red}ERROR!${def} \"$1\" is not regular file suitable for inspection. Exiting ..."
+    exit 1
+fi
+
+# error-checking
+if [[ $num != +([0-9]) ]]; then     # bash glob +([0-9]) is same as regex [0-9]+
+    echo -e "${red}ERROR!${def} -x must be followed by a positive number. You have ($num).\n\n"
+    usage
+    echo -e "\n\nExiting ...\n"
+    exit 1
+fi    
+
+if [[ -n $max && $num -lt 1 ]]; then
+    echo "${red}ERROR!${def} Numeric option -x ($num) cannot be less than 1! Exiting ..."
+    exit 1
+fi
+
+# if more than one file specified, say how many. echo to stderr
+if [[ $# -gt 1 ]]; then
+    # if $rem_ON is true, insert the value of $opt_remark; else, do nothing
+    echo -e "    NOTE: Looking for $# files. ${rem_ON:+$opt_remark}\n" >&2
+fi
+
+function build_sed_script() {
+
+    # build top of script
+    cat <<-EOF > $sed_script
+	# If any of these control codes are found, branch to label ":sub"
+	#   hex 09 (TAB) is invalid if -t was used
+	#   hex 0d (CR)  is invalid if -r was used
+	/0[0-8${no_tab}bc${no_cr}ef]/ {   # hex 00-08, 0B(VT), 0C(FF), 0E-0F
+	    s//${yeR}&${def}/g
+	    b sub
+	}
+
+	/1[0-9b-f]/ {                     # hex 10-19, 1B (ESC), 1e-1f
+	  s//${yeR}&${def}/g
+	  b sub
+	}
+	EOF
+    (($?)) && ((ERRORS++))
+
+    # build middle of script
+    if [[ -n $z_at_eof ]]; then       # hex 1A (sub)
+        # Allow one Ctrl-Z, but only at the exact EOF
+        # Need the \$ below because $! is a shell variable for background PID
+        cat <<-EOF >> $sed_script
+		/1a/ {
+		    N;
+		    \$! { s/1a/${yeR}&${def}/g; s/$/\n/; h;p; }
+		    # The last line will contain "sub", not "1a"
+		    $  { /sub /{ s/$/\n/;h;p; }; }
+		}
+		EOF
+    else
+        # Forbid Ctrl-Z everywhere
+		cat <<-EOF >> $sed_script
+		/1a/ {
+		    s//${yeR}&${def}/g
+		    b sub
+		}
+		EOF
+    fi
+
+    # build end of sed script
+    cat <<-EOF >> $sed_script
+	/7f/ {                  # hex 7F (DEL)
+	  s//${yeR}&${def}/g
+	  b sub
+	}
+
+	/[89a-f][0-9a-f]/ {     # hex 80-FF (any high-bit character)
+	  s//${yeR}&${def}/g
+	  b sub
+	}
+	                        #   Else, line has no forbidden characters, so:
+	n;                      #     skip the even-numbered lines (with ASCII chars)
+	b;                      #     branch to end of this script
+	: sub
+	N;s/$/\n/;              #   Get Next line, add blank line
+	p;                      #   Print results to stdout
+	#---end sed script---
+	EOF
+}
+
+# od (octal dump) options:
+#  -A RADIX  Print file offsets in decimal (d), octal (o), hex (x), or none (n)
+#  -t TYPE   Print output format in defined type. "x1" for hex, 1 byte unit
+#  -a     Include ASCII equivalents below each line (same as -t a)
+#  -N i   Only read i (integer) number of bytes
+#  -v     Verbose; do not use '*' to mark line duplication
+#  -w i   Output width of i bytes/line (i defaults to 16 chars)
+
+# main
+if [[ -n $doDump ]]; then        # hex dump all or part of the file
+
+    if [[ -n $max ]]; then       # dump part of the file
+
+        if [[ $source == "[stdin]" ]]; then
+            od -An -tx1 -a -v -N $(($num * 16)) - | sed 'n;G'
+            (($?)) && ((ERRORS++))
+        else
+            /bin/ls $source | while read file
+            do
+                (( files_processed++ ))
+
+                (( $# > 1 )) && echo "${yeD}$file:${def}"    # print the filename
+                
+                # show a max of $num lines, which is also ($num * 16) bytes
+                od -An -tx1 -a -v -N $(($num * 16)) $file | sed 'n;G'
+                (($?)) && ((ERRORS++))
+                
+                (( files_processed < $# )) && echo "----"    # file separator
+            done
+        fi 
+
+    else
+        # dump the entire file
+        if [[ $source == "[stdin]" ]]; then
+            od -An -tx1 -a -v - | sed 'n;G'
+            (($?)) && ((ERRORS++))
+        else
+            /bin/ls $source | while read file
+            do
+                (( files_processed++ ))
+                (( $# > 1 )) && echo "${yeD}$file:${def}"    # print the filename
+                od -An -tx1 -a -v $file | sed 'n;G'
+                (($?)) && ((ERRORS++))
+                (( files_processed < $# )) && echo "----"    # file separator
+            done
+        fi
+    fi
+
+else                           # search for invalid chars
+
+    build_sed_script
+
+    # Script logic:
+    #   od runs through the entire file and passes the output to sed, looking
+    #   for forbidden characters, which are put into $bad_chars. If this
+    #   file is not empty, display the top $num lines. Delete temp files.
+
+    if [[ $source == "[stdin]" ]]; then
+
+        od -An -tx1 -a -v $1 | sed -nf $sed_script > $bad_chars
+        (($?)) && ((ERRORS++))
+ 
+        if [[ -s $bad_chars ]]; then
+            ((ERRORS++))
+            echo "$source contains control codes or graphics characters!"
+            echo "od -An -tx1 -a $source: (octdump -no_offset -hexcodes -ascii)"
+
+            # multiply by 3 because each line of "display" is actually 3 lines:
+            # one hex, one ascii, one cosmetic blank line
+            sed $(($num * 3))q $bad_chars
+        else
+            echo "$source contains only printable ASCII chars${and_no}."
+        fi
+
+    else    # one or more files was passed on the command line
+
+        /bin/ls $source | while read file
+        do
+            (( files_processed++ ))
+            od -An -tx1 -a -v $file | sed -nf $sed_script > $bad_chars
+            (($?)) && ((ERRORS++))
+            
+            if [[ -s $bad_chars ]]; then
+                echo "$file contains control codes or graphics characters!"
+                sed $(($num * 3))q $bad_chars
+            else
+                echo "$file contains only printable ASCII chars${and_no}."
+            fi
+            rm $bad_chars
+
+            (( files_processed < $# )) && echo "----"
+        done
+
+    fi
+fi
+
+# quietly remove non-existent files
+/bin/rm -f $sed_script $bad_chars
+
+if (( ERRORS > 0 )); then
+    echo $ERRORS errors counted during processing! >&2
+
+    # Prevent exit codes from being evenly divisible by 256
+    (( ERRORS % 256 == 0 )) && exit 233
+fi
+
+exit $ERRORS
+#---[ end of file ]---

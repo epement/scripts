@@ -1,0 +1,128 @@
+#!/usr/bin/perl -w
+# Emacs file vars -*- mode:cperl; tab-width:4; indent-tabs-mode:nil -*-
+#
+# filename: renx - Larry Wall's filename fixer
+#   author: Eric Pement
+#     date: 2004-09-24
+# modified: 2021-10-13 08:37:01 (GMT-0400)
+#
+# Based on 'rename' in "The Perl Cookbook, 2nd Edition" (2003), p. 364.
+# Expanded for Windows and Cygwin, plus some additional options.
+use strict;
+# use warnings;
+# use File::DosGlob qw( glob );   # use this if using Windows outside of Cygwin
+
+use Getopt::Long;
+Getopt::Long::Configure ("bundling");
+
+my $version = '1.7';
+my( $help, $dry_run, $quiet, $verbose, );
+GetOptions('h|help'       => \$help,
+           'n|dry-run'    => \$dry_run,
+           'q|quiet'      => \$quiet,
+           'v|verbose'    => \$verbose,
+           ) or die "Invalid option switch: $!";
+
+#----[ subs ]--------------------------------------------------
+sub show_help {
+    my $pgm = $0;
+    $pgm =~ s|^.*/||;     # delete to last slash
+
+    print <<"END_OF_HELP";
+$pgm, v$version - File renamer, extended
+
+  Use 1 or more Perl substitutions to rename files (not directories). Prints
+  "renaming OldName -> NewName" for each file, followed by a summary of the
+  total number of files renamed.
+
+USAGE:  $pgm [-options] 'perl s/cript/s/;' [afn1 afn2 ... ]
+
+SAMPLE:
+  $pgm -n 's/\.htm\$/\.html/' *.htm
+  find /some/path -name 'regex*' | $pgm 's/ [.] doc \\z/txt/xi;'
+  echo 'a[bc]* def* gh*' | xargs $pgm -n 's/find/repl/'  # split on space
+
+OPTIONS:
+  -h, --help      Print this help menu
+  -n, --dry-run   Do not change anything, just show what would happen
+  -q, --quiet     Hide each "renaming ..." line, but show summary and errors
+  -v, --verbose   Output extra information about what is being done
+
+END_OF_HELP
+}
+
+
+#----[ main ]--------------------------------------------------
+my ($longest, $sum, $errs, ) = (0, 0, 0, );
+my $op = shift or (show_help(), exit);    # pattern or action required
+if ( $verbose ) {
+    print "Verbose output:\n";
+    print "  script is: [$op]\n";
+}
+
+# Unix expands command-line args before passing to perl, Windows doesn't.
+# The qq("$_") is needed for filenames with spaces with wildcards are used.
+@ARGV = map { glob qq("$_") } @ARGV;
+
+if ( $verbose ) {
+    print "verbose: Number of items in \@ARGV: ", scalar @ARGV, "\n";
+}
+
+# If no filenames on the command tail, get them from stdin
+chomp(@ARGV = <STDIN>) unless @ARGV;
+my @filelist = @ARGV;
+
+# multiple ambiguous filespecs will create duplicate filenames. Remove them.
+my %uniquefiles = ();
+foreach my $file (@filelist) {
+    if ( -f qq($file) ) {
+        $uniquefiles{ qq($file) }++;
+    }
+    else {
+        print "Error: file \"$file\", from the command line, is not a "
+            . "regular file.\n";
+        $errs++;
+    }
+}
+
+# revise @filelist to contain only unique and valid filenames
+my @uniqfilz = sort keys %uniquefiles;
+
+if ( $verbose ) {
+    print "verbose help:\n";
+    printf "  %s has %i elements: [%s].\n", "\@ARGV", scalar @ARGV,
+        join(", ", @ARGV);
+    printf "  %s has %i elements: [%s].\n", "\@filelist", scalar @filelist,
+        join(", ", @filelist);
+    printf "  %s has %i elements: [%s].\n", "\@uniqfilz", scalar @uniqfilz,
+        join(", ", @uniqfilz);
+}
+
+# get the longest filename:
+for (@uniqfilz) {
+   $longest = length($_) if length($_) > $longest;
+}
+
+# rename files and show changes (unless modified by option switches)
+for (@uniqfilz) {
+   my $was = "$_";
+   eval $op;
+   die $@ if $@;
+   unless ("$was" eq "$_") {
+      printf("renaming %-*s  ->  %s\n", $longest, "$was", "$_") unless $quiet;
+      rename("$was","$_") unless $dry_run;
+      $sum++;
+   }
+}
+
+my $files = $sum == 1 ? "file" : "files";
+print "Total of $sum $files", ($dry_run ? " would be" : ""), " renamed.\n";
+
+if ( $errs ) {
+    my $mistake = $errs == 1 ? "error" : "errors";
+    print "$errs $mistake found.\n";
+}
+
+print "No files were renamed.\n" if $dry_run;
+
+#----[ end of script ]----

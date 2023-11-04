@@ -1,0 +1,383 @@
+#!/bin/bash
+#  -*- Emacs: mode:shell-script; tab-width:4; fill-column:78; indent-tabs-mode:nil; -*-
+#        vim: set tw=78 ai ts=4 sw=4 expandtab :
+#
+# filename: multi-column-match
+#   author: Eric Pement
+#     date: 2023-11-04 14:18:50 (UTC-0400)
+# requires: GNU awk
+prog=$(basename $0)
+vers="1.5"
+diag=0     # set to 1 if diagnostics wanted
+
+if (( diag )); then
+    AWKSTR="-v diag=1"
+else
+    AWKSTR=""
+fi
+
+function usage {
+    cat <<END_USAGE
+$prog v$vers - A tool to find duplicate or unique records
+
+  Given input data with 2 or more columns (fields), where the columns are
+  already sorted, pass a list of fields that should form a unique key. The
+  list passed via -f does not have to be in the same sort-order sequence,
+  but it must contain the same field numbers. Field numbers begin with 1.
+
+  By default, $prog returns only lines with duplicate entries
+  for each key, prefixed by a count of the duplicates for the key. This
+  example located 2 records with the same key (of 3 fields):
+
+      2 records:                  # Here, the key was -f "1,2,4"
+      LN   white  dove    AM
+      LN   white  flag    AM
+
+  Input may come from a file on the command line or from standard input.
+
+Usage:  $prog -f "field,list" [-options] [input_file]
+
+REQUIRED:
+  -f "4,3,7,..."  Comma-separated list of field numbers, in any order
+
+Options:
+  -a        Show all lines, not just blocks of duplicates
+  -b        Include blank lines (if any) from the input stream
+  -F "sep"  Field separator (default: 1 or more spaces or tabs)
+  -h        Show basic help
+  -H        Show basic help plus Option Notes
+  -l        Use last line of a duplicate set, plus all unique lines
+  -n        No numbers for duplicate sets; wrap sets in "((" and "))"
+  -t        Use top/first line of duplicates, plus all unique lines
+  -u        Show unique, non-duplicated records only
+  -v        Verbose output, add summary at end
+  -z        Begin field numbers with zero (0), not one (1)
+END_USAGE
+}
+
+function usage2 {
+    cat <<END_MOREHELP
+
+Option notes:
+
+  Leading/trailing spaces on input lines are ignored. Input field separators
+  are spaces/tabs (like awk), but this can be changed. Input data should use
+  "sort -b" to ignore leading blanks when sorting.
+
+  Option -a (all lines) prints all the input, including unique and blank
+  lines, but adds "((" and "))" before and after each set of duplicates.
+
+  If blank lines occur in the input, they are suppressed in the output, unless
+  option -b is used. By default, empty lines are automatically added to the
+  output to separate groups of duplicate records.
+
+  Option -n (no numbers) only shows duplicate sets, putting "((" and "))"
+  around each set. Running counts for each set and empty lines are not shown.
+
+  Option -u shows only fully unique records for which no duplication occurs.
+  Option -u is not compatible with -a, -t, -l, or -n.
+
+  Options -t (top) or -l (last) show fully-unique records (like -u) plus the
+  first or last record of a duplicate set. Marks "((" or "))" are not used.
+
+  To set -F (field separator) to pipe, enter -F"|". For TABs, use "\\t".
+
+END_MOREHELP
+}
+
+myAwk=/bin/gawk    # require GNU awk
+
+[[ -x "$myAwk" ]] || {
+    echo "FATAL: GNU awk is not present in \"$myAwk\" or is not executable"
+    exit 1
+}
+
+if [[ $1 = "--help" || $# -eq 0 ]]; then
+    usage
+    exit 0
+fi
+
+# parse options. A colon at the head of the string causes getopts to run
+# silently. A colon AFTER a letter means it needs an argument or parameter.
+while getopts ":abf:F:hHlntuvz" opt; do
+    case "$opt" in
+        a)  AWKSTR="$AWKSTR -v showAll=1"
+            showAll=1
+            ;;
+        b)  AWKSTR="$AWKSTR -v includeBlank=1"
+            includeBlank=1
+            ;;
+        f)  # expect a CSV format, deletes all spaces from input
+            fields=${OPTARG// /}
+            AWKSTR="$AWKSTR -v fields=\"$fields\""
+            ;;
+        F)  AWKSTR="$AWKSTR -v delim=\"$OPTARG\""
+            ;;
+        h)  usage
+            exit
+            ;;
+        H)  usage
+            usage2
+            exit
+            ;;
+        l)  # use "bottom" because "last" is a reserved word
+            AWKSTR="$AWKSTR -v bottom=1"
+            bottom=1
+            ;;
+        n)  AWKSTR="$AWKSTR -v noNumbers=1"
+            noNumbers=1
+            ;;
+        t)  AWKSTR="$AWKSTR -v top=1"
+            top=1
+            ;;
+        u)  AWKSTR="$AWKSTR -v uniq=1"
+            uniq=1
+            ;;
+        v)  AWKSTR="$AWKSTR -v verbose=1"
+            ;;
+        z)  AWKSTR="$AWKSTR -v zeroBased=1"
+            ;;
+        *)  echo "Unrecognized option switch: -$OPTARG"
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+shift $(( OPTIND - 1 ))
+
+if (( top && bottom )); then
+    echo "ERROR: Using both -t and -l at the same time are incompatible."
+    echo "Quitting ..."
+    exit 1
+fi
+
+if (( showAll )); then
+    if (( top || bottom )); then
+        echo "ERROR: The -a (show all lines) switch is not compatible with"
+        echo "the option switches -t or -l. Quitting here ..."
+        exit 1
+    fi
+fi
+
+if (( uniq )); then
+    if (( showAll || bottom || noNumbers || top )); then
+        echo "ERROR: The -u (only unique lines) switch is not compatible with"
+        echo "the option switches -a, -l, -n, or -t. Quitting here ..."
+        exit 1
+    fi
+fi
+
+if [[ -z "$fields" ]]; then
+    echo "ERROR: Option -f is required to specify the field numbers."
+    echo -e "Example: -f \"5,6,1\" uses these fields to create the key.\n"
+    usage
+    exit 1
+fi
+
+if (( diag )); then
+    echo "diag: Command: $myAwk $AWKSTR -e 'long-script' $@"
+fi
+
+# Run GNU awk and never return. Do not put $AWKSTR in "quotes" or it will be
+# interpreted as a filename. If editing in Emacs, mark the region between the
+# single quote marks, run narrow-to-region, and edit the region in awk-mode.
+$myAwk $AWKSTR -e '
+#-------------------------------------------------
+# SORT THE INPUT FIRST
+# --------------------
+# This 7-line file has been sorted on 3 fields using
+# the command "sort -b -k 1,1 -k 2,2 -k 4,4 >file":
+#    LN   white  dove    AM
+#    LN   white  flag    AM
+#    LN   white  sky     PM
+#    US   white  jacket  AM
+#    US   white  apple   PM
+#    US   white  dove    PM
+#    US   white  sand    PM
+#
+# LOOK FOR DUPLICATES
+# -------------------
+# Using "file" as the input, find duplicate records
+# by specifying the same 3 sort fields.
+#
+# multi-column-match  -f "1,2,4" file
+#
+#    2 records:
+#    LN   white  dove    AM
+#    LN   white  flag    AM
+#                              << blank line
+#    3 records:
+#    US   white  apple   PM
+#    US   white  dove    PM
+#    US   white  sand    PM
+#-------------------------------------------------
+BEGIN {
+    diag = diag ? diag : 0
+
+    # If a certain delimiter is defined, use it. Else, use the default
+    # GNU awk required for gensub. Delete the "double quotes"
+    if ( delim ) {
+        FS = gensub(/^"(.*)"$/, "\\1", "g", delim)
+        if ( diag ) printf "DIAG: FS changed to: <<%s>>\n", FS;
+    }
+
+    fields = gensub(/^"(.*)"$/, "\\1", "g", fields)   # delete "quotes"
+    gsub(/[ \t]+/, "", fields)                        # del spaces or tabs
+    i_Fields = split(fields, a_Field, ",")            # create array
+
+    if ( i_Fields == 1 )
+        print "WARNING: Only one field defined as unique key!\n" > "/dev/stderr";
+
+    if ( diag ) {
+        printf "DIAG: orig value of fields: %s\n", fields
+        printf "DIAG: number of i_Fields  : %i\n", i_Fields
+    }
+    buffer = ""
+    blank_count = 0
+}
+
+function print_above_block(counter,      msg_end) {
+    # print one line ABOVE the set, either (a) showing a double-paren
+    # marker, or (b) showing how many duplicate records exist
+
+    if ( showAll || noNumbers ) {   # handle the -n switch
+        print "(("
+    }
+    else if ( top || bottom ) {     # handle the -t or -l switch
+        return
+    }
+    else {
+        # Usually like "17 records:"
+        print counter " records:"
+    }
+}
+
+function print_record_block(line_set, end_group) {
+    # print the set and the line below it
+
+    if ( top )                         # handle the -t switch
+        sub(/\n.*$/, "", line_set)
+    else if ( bottom )                 # handle the -l switch
+        sub(/^.*\n/, "", line_set)
+
+    print line_set
+
+    # one line below the set
+    if ( end_group ) {
+        if ( showAll || noNumbers )    # handle -a or -n
+            print "))"
+        else if ( top || bottom )      # handle -t or -l
+            return
+        else
+            print ""
+    }
+}
+
+function print_totals() {        # handle the -v switch
+    print "------"
+    printf "Fields defined:  %s\n", fields
+
+    if ( uniq ) {
+        printf "Unique records: %4 i\n", u_count
+    }
+    else {
+        if ( showAll || includeBlank ) {
+            if ( blank_count ) {
+                printf "Non-blank recs:  % 4i\n", t_count
+                printf "Blank lines:     % 4i\n\n", blank_count
+            }
+            else {
+                printf "Total records:   % 4i\n\n", t_count
+            }
+        }
+
+        printf "Records matched: % 4i\n", d_count
+        printf "Duplicate sets:  % 4i\n", s_count
+        printf "Duplicate recs:  % 4i\n", d_count - s_count
+    }
+}
+
+# Print blank lines only if -a or -b are used
+NF == 0 && ( showAll || includeBlank ) {
+
+    # Add line to the buffer, but do not increase buffer_count, because
+    # buffer_count is a count of duplicate keys. There are no keys here.
+    buffer = ( buffer ? buffer "\n" : "\n" )
+    blank_count++         # count blank lines for use in Summary
+}
+
+# For each non-blank line ...
+NF {
+    this_row = ""; val = ""; num = 0
+    t_count++
+
+    if ( diag ) {
+        printf "DIAG: Line %i: <<%s>>\n", NR, $0
+        printf "DIAG: $1 = <%s>, $2 = <%s>, FS = <%s>, NF = %s\n", $1,$2,FS,NF
+    }
+
+    for ( i = 1; i <= i_Fields; i++ ) {
+
+        num = zeroBased ? a_Field[i] + 1 : a_Field[i]    # handle -z option
+
+        val = $num                  # turns $3 into a string from this line
+
+        # SUBSEP is non-printing Control char = ^\ = \034 = 0x1C
+        this_row = i == 1 ? val : this_row SUBSEP val
+
+        if ( diag )
+            printf "DIAG: i is %i, pos is %i, val is <<%s>>\n", i, num, val;
+    }
+
+    if ( diag ) printf "DIAG: this_row is <<%s>>\n\n", this_row;
+
+    if ( this_row != last_row ) {     # This line has a new key
+
+        if ( buffer_count > 1 && uniq == 0 ) {     # duplicates matched
+
+            print_above_block(buffer_count)
+            print_record_block(buffer, 1)          # and data below the block
+            s_count++                              # total of duplicate sets
+            d_count += buffer_count                # total of duplicate lines
+        }
+
+        if ( buffer_count == 1 ) {                 # unique records matched
+            if (showAll || uniq || top || bottom)  # handle -a, -u, -t or -l
+                print_record_block(buffer, 0);     # no blank line or "))"
+            if ( uniq )
+                u_count++;
+        }
+
+        buffer = ""          # Clear the buffer since it is a new set
+        buffer_count = 1     # For the current line
+    }
+    else {                   # This line has the same key as the line above it
+        buffer_count++
+    }
+
+    # In either case,
+    last_row = this_row
+    buffer = ( buffer ? buffer "\n" $0 : $0 )
+}
+
+END {
+    # Pick up anything left over
+    if ( buffer_count > 1 && uniq == 0 ) {
+        print_above_block(buffer_count)
+        print_record_block(buffer, 1)
+        s_count++
+        d_count += buffer_count
+    }
+
+    if ( buffer_count == 1 ) {
+        if ( showAll || uniq || top || bottom )
+            print_record_block(buffer, 0);
+        if ( uniq ) u_count++;
+    }
+
+    if ( verbose ) print_totals();
+}
+#-------------------------------------------------
+' "$@"
+#---end of script ---
