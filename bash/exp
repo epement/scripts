@@ -2,20 +2,32 @@
 #
 # filename: exp
 #   author: Eric Pement
-#     date: 2023-11-04 13:50:42 (UTC-0400)
+#     date: 2023-11-09 12:55:08 (UTC-0500)
 # requires: bc, perl, fold, sed
 #
 # history:
+# 2.10: allow MSYS to use Cygwin version of bc
 #  2.9: check for required files
 #  2.8: added comment for sqrt
-VERSION="2.9"
-PRG=`basename $0`
+VERSION="2.10"
+PRG=$(basename $0)
 
 # Full path to these programs must be defined here
-fold='/bin/fold'
-perl='/bin/perl'
-sed='/bin/sed'
-bc='/bin/bc'    # binary calculator. MSYS can use the Cygwin version of bc
+fold="/bin/fold"
+perl="/bin/perl"
+sed="/bin/sed"
+
+if [[ $(uname -o) == 'Msys' ]]; then
+    bc='/c/cygwin64/bin/bc'     # MSYS can use the Cygwin version of bc
+else
+    bc='/bin/bc'                # binary calculator
+fi
+
+# check required programs
+[[ -x $bc ]]   || { echo "FATAL: $bc not found or not executable!"; exit 1; }
+[[ -x $fold ]] || { echo "FATAL: $fold not found or not executable!"; exit 1; }
+[[ -x $perl ]] || { echo "FATAL: $perl not found or not executable!"; exit 1; }
+[[ -x $sed ]]  || { echo "FATAL: $sed not found or not executable!"; exit 1; }
 
 function usage {
   cat <<EOF
@@ -64,12 +76,6 @@ fi
 # set defaults
 SCALE=5
 WIDTH=80
-
-# check required programs
-[[ -x $bc ]]   || { echo "FATAL: $bc not found or not executable!"; exit 1; }
-[[ -x $fold ]] || { echo "FATAL: $fold not found or not executable!"; exit 1; }
-[[ -x $perl ]] || { echo "FATAL: $perl not found or not executable!"; exit 1; }
-[[ -x $sed ]]  || { echo "FATAL: $sed not found or not executable!"; exit 1; }
 
 # parse options. Putting a colon at the head of the string causes getopts to
 # run in silent mode. Options p and w require arguments
