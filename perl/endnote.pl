@@ -1,17 +1,19 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl -w -s
 #  Emacs file variables: -*- mode:perl; indent-tabs-mode:nil; tab-width:4; -*-
 #
 # Filename: endnote.pl
 #   Author: Eric Pement
-#  Version: 1.42
-#     Date: 2012-12-28, 2023-11-01
+#  Version: 1.44
+#     Date: 2023-11-22 03:23:48 (UTC-0500)
 # Copyleft: Free software under the terms of the GNU GPLv3
-#  Purpose: To convert in-text notes and references to endnotes
+#  Purpose: To convert in-text references and notes to endnotes
 #
-#  Usage: perl [-s] endnote.pl [-options] source.txt >output.txt
+#  Usage:
+#     endnote.pl [-options] source.txt >output.txt
+#     perl [-s] endnote.pl [-options] source.txt >output.txt
 #
 # Options
-#   -alt_np='str'   # use 'str' (literal) as an alternate note point
+#   -alt_nm='str'   # use 'str' (literal) as an alternate note marker
 #   -ignore_errors  # ignore mismatched numbering in endnotes
 #   -ssnotes        # omit blank line between notes (default: 1 line)
 #   -start='n'      # start numbering at 'n' instead of 1
@@ -19,7 +21,7 @@
 # DOS/Windows users should enter "str" (double quotes) in the top option, above
 #
 use strict;
-use vars qw/$start $ssnotes $ignore_errors $alt_np/;
+use vars qw/$start $ssnotes $ignore_errors $alt_nm/;
 # use warnings;
 # use diagnostics;    # requires a full version of perl
 
@@ -35,10 +37,10 @@ if (defined $start and $start !~ /^\d+$/ ) {
     exit 1;
 }
 
-if (defined $alt_np and $alt_np =~ /^$/ ) {
-    print STDERR "\aError!\nOption switch 'alt_np' was used, but "
+if (defined $alt_nm and $alt_nm =~ /^$/ ) {
+    print STDERR "\aError!\nOption switch 'alt_nm' was used, but "
     . "it does not have a value assigned to it.\n"
-    . "The syntax must be '-alt_np=\"string\"', where \"string\" is "
+    . "The syntax must be '-alt_nm=\"string\"', where \"string\" is "
     . "interpreted as a string literal.\nQuitting here ...\n";
       exit 1;
 }
@@ -50,79 +52,56 @@ marked input file.
 
 =head1 SPECIAL TERMS
 
- note points - The places in the document body (paragraph) where superscript
-               or bracketed numbers would normally be placed. Note points
-               appear in the main text, not at the end of the document.
+ Note references - The digits in a printed document which usually appear in
+     superscript or in [square brackets]. In plain ASCII, superscript is not
+     available, so note references occur inside square brackets.
 
- note body   - The full text of an individual note, whether a single word
-               like "Ibid." or a long comment extending a paragraph or more.
-               Each note point must have a corresponding note body.
+ Note Markers - Identical strings which will be changed to incrementing
+     numbers (note references) after the file is processed.
+
+ Note - A citation or documentation item referred to by a note reference. It
+     may be as short as "Ibid." or as long as several paragraphs.
+
+ Note Body - A note (above), prefixed by "#." or "##." at the beginning of
+     the line.
+
+ Note Block - A group of one or more note bodies, enclosed before and after
+     by 2 consecutive square brackets, as "[[" and "]]".
 
 =head1 THEORY AND GOAL
 
-The goal of ENDNOTE is to make it easy to create and edit documents with note
-references using a plain text editor like vi, vim, Emacs, PSPad, UltraEdit,
-Notepad++, gedit, etc. Note references in academic writing are sequential
-numbers set in square brackets or set in superscript, referring the reader to
-the same number at the bottom of the page ("footnotes") or at the end of the
-document ("endnotes"), giving formal citation or further explanation for
-something written at the note point.
+The goal of ENDNOTE is to make it easy to edit text files with endnotes using
+a plain text editor like vim, Emacs, Notepad++, etc.
 
-The best way to do this is with a source document (for editing) that produces
-a target document with the formatted output.
+In academia, note references are sequential numbers in square brackets that
+direct the reader to a corresponding number at the page bottom ("footnotes")
+or the end of the document ("endnotes"), usually citing a source.
 
-We believe the source document with its markup should be as easy to read as
-the output document. It should be easy to move paragraphs around, and the
-notes should follow. A block of text containing several notes should be easy
-to move to another location without renumbering anything. This system allows
-the writer or editor to focus on the organization of the paper, without being
-distracted by manually numbering and renumbering note references.
+While writing, moving paragraphs containing note references is difficult.
+Microsoft Word handles auto-renumbering, but this is not possible in plain
+text. Some writers resort to the Author-Date citation system (Pement 2023).
 
-When the writing is complete, the source document is run through a script
-which numbers all the note points sequentially and collects all the "note
-bodies", deleting them from the main body of the document and moving them to
-the end of the file, where they are formatted and neatly printed. The total
-number of note points in the main document will always match the total number
-of notes at the end of the document.
+To get numbered citations, ENDNOTE requires a markup document with anonymous
+note markers. ENDNOTES numbers each marker and moves the notes to the end of
+the file. Output goes to screen unless redirected. ENDNOTE offers various ways
+to enter notes into a document. Choose one that works best for you.
 
-If the output doesn't look like you expect, the source document is still a
-separate file. Tweak the source file as necessary, and create a new output
-file.
+At this time, ENDNOTE produces only endnotes, not footnotes.
 
-The markup style for ENDNOTE offers users different ways of entering note
-text ("note bodies") into a document. Choose whichever works best for you.
+=head2 INSERT THE NOTE MARKERS
 
-The markup style allows the user to double-space note references in the
-source document, but have single-spaced note references in the output
-document. Or vice versa: users can single-space note references in the source
-document but print double-spaced note references in the target document. Or
-they can use the same formatting in both source and destination.
-
-The markup style in ENDNOTE was designed for handling plain text with
-monospaced, nonproportional fonts, but it works equally well in output
-formats without fixed page widths, such as HTML. At this time, ENDNOTE
-produces only endnotes, not footnotes.
-
-So let's get to the system, which has just two items: how to insert note
-points (strings pointing to note references), and how to insert the note
-references themselves (the academic documentation or explanatory statement).
-
-=head2 INSERT THE NOTE POINTS
-
-In a paragraph, indicate the note references by one of these strings: [#] or
-[##] or [###] or [####]. I call these strings "note points." They represent
-the point in the line where incrementing numbers should appear in the text.
-It makes no difference which you use. For example,
+In a paragraph, indicate Note Markers by one of these strings: [#] or [##] or
+[###] or [####]. They represent the point where incrementing numbers should
+appear in the text. For example,
 
    [####] [#] [##]
 
-will be interpreted as "[1] [2] [3]" at the beginning of a file. The number
-of pound signs ("#") does not control how the numbers appear on output, and
-numbers higher than 9999 are available with [#] alone.
+will be translated to "[1] [2] [3]" at the beginning of a file. The number of
+pound signs does not control how the numbers appear on output, and numbers
+higher than 9999 are available with [#] alone.
 
-If you are writing for monospaced output where line-lengths are important,
-bear in mind that as note numbers expand to multiple digits, line lengths on
-the output file may be longer than expected. For example,
+Line-length of the output is probably important, so remember that as Note
+Markers expand to multiple digits, line lengths will also expand. For example,
 
    ape[#] bee[#] cow[#] dog[#] eagle[#] frog[#]
 
@@ -130,20 +109,19 @@ with sufficient previous notes might expand into:
 
    ape[1512] bee[1513] cow[1514] dog[1515] eagle[1516] frog[1517]
 
-So if you are using a lot of footnotes, feel free to switch from [#] to [##]
-or [####] any time you like. I normally use [##] for most of my writing,
-since I rarely have more than 99 footnotes in a single document.
+You may switch from [#] to [##] at any time. I normally use [##] for most of
+my writing, since I rarely have more than 99 footnotes in one file.
 
-The option "-alt_np=I<string>" allows setting the note point to a string other
+The option "-alt_nm=I<string>" allows setting the note marker to a string other
 than "[#]" and its relatives. This string will be interpreted as a literal
 string, not as a regular expression (e.g., you can use '*' if you like).
 
 =head2 INSERT THE NOTE BLOCKS
 
-The ENDNOTE system lets you enter note references as close to the original
-note as you would like, either within the same paragraph, at the end of the
-paragraph, or in the following paragraph. Whichever you choose, you must
-enter the references in a note block, defined here:
+ENDNOTE lets you enter note text as close to the Note Marker as you wish,
+either within the same paragraph, at the end of the paragraph, or in the
+following paragraph. Whichever you choose, you must enter the references in a
+note block, defined here:
 
   note block  -
       A group of consecutive lines enclosed between "[[" and "]]",
@@ -163,7 +141,7 @@ mentioned, there are several ways to construct the note block. Had Beebee and
 Robbins had ENDNOTE available to them, they could have marked up some of
 their paragraphs like this:
 
-=head3 Notes within the paragraph
+=head3 Insert Note Block inside the paragraph
 
 In the following example, Italic type is indicated by the txt2tags markup of
 wrapping italicized words in two slashes "//".
@@ -173,16 +151,15 @@ wrapping italicized words in two slashes "//".
    remedies that deficiency via the //-stable// option: its output for
    this example correctly matches the input.
 
-This is both efficient and compact. Observe that "[[" and "]]" may occur on a
-single line, as above. It is useful for short notes, but with longer notes of
-several lines, this style breaks up the readability of the paragraph.
+This is efficient and compact. See thata "[[" and "]]" may occur on a single
+line, as above. It is useful for short notes, but with longer notes of several
+lines, this style breaks up the readability of the paragraph.
 
-=head3 Notes at the end of the paragraph
+=head3 Append Note Block to the end of the paragraph
 
-Two or more note references can be included in a note block. For increased
-legibility, the note block can be moved to the end of the paragraph. Also,
-the "[[" marker does not need to have text on the same line, nor does "]]"
-need to have any words before it on the same line.
+Two or more Note Bodies can be included in a Note Block. For legibility, put
+the Note Block to the end of the paragraph. It is a bit more legible if the
+delimiters "[[" and "]]" are on separate lines. Example:
 
    The locale name encodes a language, a territory, and optionally, a
    codeset and a modifier. It is normally represented by a lowercase
@@ -194,15 +171,14 @@ need to have any words before it on the same line.
    #. Available at http://userpage.chemie.fu-berlin.de/diverse/doc/ISO_3166.html.
    ]]
 
-=head3 Notes in a subsequent paragraph
+=head3 Append Note Block as a subsequent paragraph
 
-The "paragraph reformat" command of most editors, if applied to the paragraph
-of the preceding example, will probably "wrap" the note block to the end of
-the previous sentence, destroying its formatting. (Remember, "[[" must be the
+Paragraph reformatting usually "wraps" the note block to the end of the
+previous sentence, destroying its formatting. (Remember, "[[" must be the
 first visible characters on a line.)
 
-If you insert a blank line between a paragraph and the note block, the note
-block will I<not> be merged with the paragraph above it.
+Put a blank line between the paragraph and the note block, to avoid accidental
+paragraph reform.
 
    The locale name encodes a language, a territory, and optionally, a
    codeset and a modifier. It is normally represented by a lowercase
@@ -215,28 +191,22 @@ block will I<not> be merged with the paragraph above it.
    #. Available at http://userpage.chemie.fu-berlin.de/diverse/doc/ISO_3166.html.
    ]]
 
-"Now wait a minute," you ask. "If there is a blank line before a note block
-and a blank line after a note block, when the note block is removed, won't
-that leave one extra line in the output file?"
-
-For a careless programmer, yes. But ENDNOTE is crafty enough to recognize its
-own context. If a note block is preceded by a blank line and also followed by
-a blank line (thus making the note block a "paragraph" in its own right),
-ENDNOTE will delete one of those extra blank lines when the note block is
-moved to the end of the file.
+This will not result in an extra line. If a Note Block is preceded and
+followed by a blank line, making the Block a "paragraph" by itself, ENDNOTE
+deletes one of those lines when moving the Block to the end of the file.
 
 =head1 COMMENTS, BLANK LINES, FORMATTING.
 
-Within a note block, ENDNOTE supports nonprinting comment lines. If a line
-begins with ".." or "??" or "%", that line is not printed. This allows
-writers to add comments to themselves which will not appear in the output
-file. In fact, a note block can consist entirely of comment lines.
+Within Note Blocks, ENDNOTE supports nonprinting comment lines. Lines that
+begin with ".." or "??" or "%" are not printed. This allows writers to add
+comments to themselves which will not appear in the output. A Note Block can
+consist entirely of comment lines.
 
-A "note body" begins with optional space, 1-4 pound signs, and a period. It
-continues until the next note body begins. When the notes are converted, the
-string of pound signs is converted into the next expected integer.
+A Note Body begins with optional whitespace, 1-4 pound signs, and a period. It
+continues until the next Note Body begins. When the Note Bodies are processed,
+the pound signs are converted to the next expected integer.
 
-Blank lines in the middle of note blocks are handled like this:
+Blank lines in the middle of Note Blocks are handled like this:
 
 =over 3
 
@@ -248,44 +218,43 @@ Blank lines in the middle of note blocks are handled like this:
 
 =back
 
-When ENDNOTE runs, it immediately prints the body text and "note points",
-while collecting note bodies (without printing them). When it comes time to
-print the endnotes, it counts the number of already-printed note points and
-the number of note bodies waiting to be printed. If there is a mismatch,
-ENDNOTE aborts with an explanatory error message.
+When ENDNOTE runs, it immediately prints the body text and auto-numbers the
+Note Markers, while collecting Note Bodies without printing them. When it
+comes time to print the endnotes, it counts the number of already-printed Note
+Markers and the number of Note Bodies waiting to be printed. If there is a
+mismatch, ENDNOTE aborts with an explanatory error message.
 
-Otherwise, ENDNOTE prints
+Otherwise, ENDNOTE prints the following:
 
    ---------
    ENDNOTES:
 
-followed by the collected series of note bodies. The "[[" and "]]" markers
-are discarded.
+followed by the collected array of Note Bodies. The "[[" and "]]" markers
+around the Note Block are discarded.
 
 =head1 OPTIONS
 
-By default, note points in the text must be indicated by [#], [##], [###],
-or [####]. You may opt for something simpler, such as '*' (asterisk), by
-the switch I<alt_np>. The characters will be interpreted as literal strings,
-not as regular expressions or metacharacters.
+By default, Note Markers in the text are indicated by [#], [##], etc. You may
+use something simpler, such as '*' (asterisk), by the switch I<alt_nm>.
+The characters will be interpreted as literal strings, not as regular
+expressions or metacharacters.
 
-By default, one blank line is automatically inserted after each note body
+By default, one blank line is automatically inserted after each Note Body
 (double-spacing between notes, which is not the same as double-spacing each
 note). If a switch is passed for I<ssnotes> (single-spaced notes), the
-blank line is omitted.
+blank line between notes is omitted.
 
-By default, note numbering always begins with 1. A switch named
-I<start> allows notes to begin numbering at any specified integer.
+By default, note numbering always begins with 1. The switch I<start> allows
+notes to begin at any specified integer, including zero.
 
-By default, ENDNOTE halts if the number of note bodies do not
-correspond with the number of note points. A switch named
-I<ignore_errors> causes ENDNOTE to ignore mismatched notes in the body
-and the endnote section, printing the notes "as is" without halting.
-This switch can be helpful if you need to print a working draft and
-you don't care about mismatched notes.
+By default, ENDNOTE halts if the number of Note Bodies does not equal the
+number of Note Markers. The switch I<ignore_errors> causes ENDNOTE to ignore
+mismatched notes in the body and the endnote section, printing the notes "as
+is" without halting. This switch can be helpful if you need to print a working
+draft and you don't care about mismatched notes.
 
 This switch is also useful if you simply need to number items in a list.
-Set I<alt_np> to a simple string like '#', use I<ignore_errors>, and
+Set I<alt_nm> to a simple string like '#', use I<ignore_errors>, and
 ENDNOTE will replace each '#' with an incrementing number. If you need to,
 you can use I<start> at the same time.
 
@@ -293,6 +262,8 @@ you can use I<start> at the same time.
 
 Normal syntax:
 
+   endnote.pl [-options] source.txt > output.txt
+or
    perl [-s] endnote.pl [-options] source.txt > output.txt
 
 Switch placement. Note that B<-s> comes I<before> the script name, but the
@@ -300,35 +271,34 @@ options prefixed with a hyphen come I<after> the script name.
 
 Options:
 
- -alt_np='str'   # use 'str' (literal) as an alternate note point
+ -alt_nm='str'   # use 'str' (literal) as an alternate Note Marker
  -ignore_errors  # ignore mismatched numbering in endnotes
  -ssnotes        # omit blank line between notes (default: 1 line)
  -start='n'      # start numbering at 'n' instead of 1
 
 =head1 CREDITS
 
-Key ideas for this system are adapted from "wsNOTE" by Eric Meyer. wsNOTE was
-a MS-DOS utility for handling both footnotes and endnotes in WordStar files,
-at a time when WordStar supported neither. Documentation for wsNOTES is at
-http://sites.google.com/site/vdeeditor/Home/vde-files/wsnote-manual
+The idea for this system came from "wsNOTE" by Eric Meyer. wsNOTE was a MS-DOS
+utility for handling both footnotes and endnotes in WordStar files, at a time
+when WordStar supported neither.
 
 =head1 AUTHOR
 
-Eric Pement - eric.pement [=at=] gmail.com
+Eric Pement
 
 =head1 VERSION
 
-This release of ENDNOTE is version 1.42.
+This release of ENDNOTE is version 1.44.
 
 =cut
 
-# $i_TextCount counts note points in the body of the main text.
+# $i_TextCount counts note markers in the body of the main text.
 # $i_RefCount counts note items in the endnote body at the end.
 # Use $start to set an initial note number other than 1.
 $i_TextCount = $i_RefCount = (defined $start ? $start - 1 : 0);
 
-# quote special characters in alternate note points
-$alt_np =~ s/[.?*+([$@%&`\\]/\\$&/g if defined $alt_np;
+# quote special characters in alternate note markers
+$alt_nm =~ s/[.?*+([$@%&`\\]/\\$&/g if defined $alt_nm;
 
 LINE: while (<>) {
     chomp;        # delete trailing LF or CRLF, usually
@@ -362,7 +332,7 @@ LINE: while (<>) {
         next if $. == ($i_BlockEndLineNum + 1) and $b_BlankLine and $b_BlankBeforeBlock;
 
         s/\[#{1,4}]/"[" . ++$i_TextCount . "]"/ge;       # increment [#]
-        s/$alt_np/++$i_TextCount/ge if defined $alt_np;
+        s/$alt_nm/++$i_TextCount/ge if defined $alt_nm;
 
         # NB: Must be positioned _after_ the if() block above.
         $b_BlankBeforeBlock = m/^\s*$/ ? "Y" : "";
@@ -383,7 +353,7 @@ sub printEndnotes {
 
 }
 
-if ( $i_TextCount == $i_RefCount or $ignore_errors) {  # note points/bodies match
+if ( $i_TextCount == $i_RefCount or $ignore_errors) {  # note markers/bodies match
 
     # Convert to array to handle single- or double-spacing on output
     @notes = split '_=SPLIT=_', $s_Refs if $s_Refs;
@@ -423,10 +393,9 @@ else {
     ================
       FATAL ERROR!
     ================
-    Note points in the body and References at the end do not match!
-    There are $i_body Note points in the body text and $i_refs References
-    for those $i_body notes. The Endnote section will not be printed.
-    Quitting here ...
+    The number of Note Markers and Note Bodies is not the same!
+    There are $i_body Note Markers and $i_refs Note Bodies. The
+    Endnote section will not be printed. Quitting here ...
 
 
     FINIS

@@ -1,10 +1,10 @@
 #!/usr/bin/awk -f
 #  Emacs file variables: -*- mode:awk; indent-tabs-mode:nil; tab-width:4; -*-
 #
-# Filename: endnote
+# Filename: endnote.awk
 #   Author: Eric Pement
-#  Version: 1.43
-#     Date: 2020-05-29 07:15:38 (GMT-0400)
+#  Version: 1.44
+#     Date: 2023-11-22 03:36:23 (UTC-0500)
 # Copyleft: Free software under the terms of the GNU GPLv3
 #  Purpose: To convert in-text notes and references to endnotes
 #    Needs: Either GNU awk (gawk) or mawk (Michael Brennan's awk)
@@ -14,7 +14,7 @@
 #     awk -f endnote [-options] source.txt [>output.txt]      # Windows/CMD shell
 #
 #  Options:
-#    -v alt_nm='str'     # use 'str' (literal) as an alternative note marker
+#    -v alt_nm='str'     # use 'str' (literal) as an alternate note marker
 #    -v ignore_errors=1  # do not check for mismatched numbering in endnotes
 #    -v ssnotes=1        # omit blank line between notes (default: 1 blank line)
 #    -v start=n          # start numbering at 'n' instead of 1
@@ -22,16 +22,17 @@
 # DOS/Windows users must enter "str" (double quotes) in the top option, above.
 #
 # Terminology:
-#   Note marker: A string in the file to be replaced by incrementing numbers.
-#   Note reference: A line or paragraph of text that corresponds to the note
-#       marker, beginning with 1 to 4 pound signs, followed by period, followed
+#   Note Marker: A string in the file to be replaced by incrementing numbers.
+#   Note Body: A line or paragraph of text that corresponds to each Note
+#       Marker, beginning with 1 to 4 pound signs, followed by period, followed
 #       by text that will become an endnote statement or paragraph. The leading
-#       pound signs will be replaced with a number matching the note marker.
-#   Note block: A pair of double brackets [[...]] which contains one or more
-#       note references and/or nonprinting comments.
+#       pound signs will be replaced with a number matching the Note Marker.
+#   Note Block: A pair of double brackets [[...]] which contains one or more
+#       Note Bodies and/or nonprinting comments.
 #
-# Default note markers:  [#], [##], [###], etc.
-# Note blocks may be either of the following:
+# Default Note Markers:  [#], [##], [###], or [####] (max 4 pound signs)
+#
+# Note Blocks may be either of the following:
 #   [[ #. Single-line style. Opening brackets must appear in column #1. ]]
 # or:
 #   [[
@@ -91,7 +92,7 @@ function printEndnotes(a_notes,      i_Counter) {
 # main body
 {  b_BlankLine = $0 ~ /^[ \t]*$/ ? "Y" : "" }
 
-# Within the note block
+# Within the Note Block:
 /^[ \t]*\[\[/, /]][ \t]*$/ {  # Range op "," also matches 1 line
 
     if ( /^[ \t]*\[\[/ ) i_LLcount++      # count [[ marker
@@ -99,9 +100,11 @@ function printEndnotes(a_notes,      i_Counter) {
     if ( /^(\.\.|\?\?|%)/ ) next          # skip comment lines
     sub(/^[ \t]*\[\[ ?/, "", $0)          # strip leading [[
 
-    # Increment note block: (optional spaces), 1-4 pound signs, period
+    # Increment Note Block: (optional spaces), 1-4 pound signs, period
     # gensub would be easier here, since it supports backreferences, but I want
-    # this code to be compatible with mawk.
+    # this code to be compatible with mawk and BWK awk. Very technically, note
+    # that the regex is "#+", since there were problems with {range,addresses}
+    # in non-GNU awk.
     if ( match($0, /^[ \t]*#+\./) ) {
         sub(/^[ \t]*/, "_=SPLIT=_&")
         sub(/#+\./, ++i_RefCount ".", $0)
@@ -124,7 +127,7 @@ function printEndnotes(a_notes,      i_Counter) {
     if ( NR == (i_BlockEndLineNum + 1) && b_BlankLine && b_BlankBeforeBlock )
         next
 
-    # match default markers: [#] or [##] or [###], etc.
+    # match default markers: [#] or [##] or [###], etc. not limited to 4.
     while ( match($0, /\[#+]/) ) {
         sub(/\[#+]/, "[" ++i_TextCount "]", $0)    # increment [#]
     }
@@ -166,7 +169,7 @@ END {
             print "=======================================================================\n"
         }
     }
-    else {       # note markers and note references do NOT match
+    else {       # Note Markers and Note Bodies do NOT match
         i_body = i_TextCount - start;
         i_refs = i_RefCount - start;
 
@@ -174,10 +177,9 @@ END {
         print "================"
         print "  FATAL ERROR!  "
         print "================"
-        print "Note markers in the body and References at the end do not match!"
-        print "There are",$i_body,"Note markers in the body text and",$i_refs,"References"
-        print "for those",$i_body,"notes. The Endnote section will not be printed."
-        print "Quitting here ..."
+        print "The number of Note Markers and Note Bodies is not the same!"
+        print "There are",$i_body," Note Markers and",$i_refs,"Note Bodies. The"
+        print "Endnote section will not be printed. Quitting here ..."
     }
 }
 #---end of script---
