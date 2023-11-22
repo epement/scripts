@@ -1,7 +1,7 @@
                      ENDNOTE.AWK and ENDNOTE.PL
 
       A Practical Method for Handling Endnotes in Text Files
-                   by Eric Pement (22 November 2023)
+                  by Eric Pement (22 November 2023)
 
    Academic writers often need note documentation in their files. In the
 editing process, it's nice to move, add, or delete paragraphs with note
@@ -148,7 +148,7 @@ produce identical output:
    {{
    ##. Blank lines between notes in a Note Block are ignored.
 
-   ##. Whether you keep them or not, it doesn't matter in the output.
+   ##. Whether you keep them or not, it doesn't affect the output.
    }}
 
    When Note Blocks are collected and formatted, by default one blank
@@ -193,7 +193,7 @@ you're not watching, the Note Marker will "wrap" to the left margin during
 paragraph reformatting.
 ]]
 
-   ENDNOTE performs a single pass down the document, formatting and
+   ENDNOTE performs a single pass through the document, formatting and
 counting as it goes along. Therefore, it doesn't "know" until it reaches
 the end of file whether the number of Note Markers equals the number of
 Note Bodies for the "Endnotes" section.
@@ -210,7 +210,7 @@ quits. (This action can overridden by an option switch.)
 followed by the collected series of Note Bodies, which have been
 automatically numbered. The "[[" and "]]" markers are discarded.
 
-D. Option switches
+D. Option Switches
 ------------------
 
    The following options are available. The syntax differs depending on
@@ -258,84 +258,95 @@ E. Running ENDNOTE with Awk
    You must have awk or perl to run ENDNOTE. If you are *only* interested
 in using ENDNOTE and have neither, awk is easier to install and learn.
 
-   Awk is installed by putting one or a few files somewhere on the PATH
-where Windows can find it. ENDNOTE will run under GNU awk (gawk.exe) or
-Michael Brennan's awk (mawk.exe).[##] If you have neither one, GNU awk is
-a better choice than mawk because gawk has better internal help, gives
-helpful error messages, and has ongoing development and bug fixes.
+   In Windows, install awk by putting one *.exe file on the PATH where
+Windows can find it. Some awk compilations install additional files.
+
+   ENDNOTE will run under any modern awk: GNU awk (gawk), Michael
+Brennan's awk (mawk), or Brian W. Kernighan's awk (BWK awk).[##] If you
+have none, GNU awk is a better choice because gawk has more informative
+help and error messages and has ongoing development and support. On the
+other hand, mawk is much smaller and faster than gawk.
 
 [[
-##. Recommended sites for gawk and mawk, precompiled for Windows:
-http://vkiefel.de/compiled-SW.html - has gawk 5.3 and mawk 
-https://sf.net/projects/ezwinports/files/ - latest gawk-5.2*-bin.zip
-https://klabaster.com/freeware.htm  - both gawk 4.4.4 and mawk here
-https://delorie.com/djgpp/dl/ofc/dlfiles.cgi/current/v2gnu/ - gwk500b.zip
+##. Various awks precompiled for Windows as one *.exe file:
+http://vkiefel.de/compiled-SW.html - gawk 5.3, mawk, BWK awk
+https://klabaster.com/freeware.htm - gawk 4.1.4 and mawk
 
-GNU awk (gawk) is included with the Unix toolkit in Git For Windows at
-https://gitforwindows.org. It is also included by default with Cygwin.
+GNU awk compiled for Windows, with additional DLLs:
+https://sf.net/projects/ezwinports/files/ - latest gawk-5.3*-bin.zip
 
-ENDNOTE should run without errors under BWK awk, "The One True Awk".
-Uncompiled source code is at https://github.com/onetrueawk/awk
+GNU awk is included with the Unix toolkit in Git For Windows at
+https://gitforwindows.org. It is also included with Cygwin.
+
+BWK awk ("The One True Awk") is at https://github.com/onetrueawk/awk
 ]]
 
    ENDNOTE for awk is available from http://www.pement.org/awk.htm
 
    The syntax for the awk version of ENDNOTE is:
 
-   awk [-options] -f endnote.awk source_file >output_file
+   awk [-options] -f endnote.awk source.txt > output.txt
 
-SWITCH PLACEMENT. Note that if options are used, option switches must
-occur before the -f switch. Each option requires a separate -v switch.
+   If the AWKPATH variable is defined, "endnote.awk" can be put in any
+directory in that path, so you can omit using a fully-qualilfied path to
+the script. If you are using a bash shell, you can omit the awk command
+also, because the first line of "endnote.awk" is a shebang line, allowing
+the script to find its own interpreter.
+
+SWITCH PLACEMENT. If switches are used, they must come before the name of
+the file to be processed. Each option requires a separate -v switch.
 
   Options:
-    -v alt_nm='str'     # use 'str' (literal) as an alternate note marker
+    -v alt_nm="str"     # use "str" (literal) as an alternate note marker
     -v ignore_errors=1  # ignore mismatched numbering in endnotes
     -v ssnotes=1        # omit blank line between notes (default: 1 line)
-    -v start=n          # start numbering at 'n' instead of 1
+    -v start=n          # start numbering at "n" instead of 1
 
 Example: to use the first two options, where the alternate Note Marker
-string will be a single asterisk, use this syntax in Unix:
+string will be a single asterisk, use this syntax:
 
-   awk -v alt_nm='*' -v ignore_errors=1 -f endnote.awk infile >outfile
-
-In Windows, replace the single quotes with double quotes:
-
-   awk -v alt_nm="*" -v ignore_errors=1 -f endnote.awk infile >outfile
+   awk -v alt_nm="*"' -v ignore_errors=1 -f endnote.awk in.txt > out.txt
 
 F. Running ENDNOTE with Perl
 ----------------------------
 
-   Perl is a high-powered programming and "glue" language that is a
-favorite for programmers and sysadmins. The latest version is easy to
-find.[##] If you're running Unix, Linux, or Mac OS X, perl is already
-installed. If you have installed Git for Windows, or Cmder, or Laragon,
-or XAMPP, perl is installed by default. If you have Cygwin, perl is not
-installed by default, but it is easily added by the Cygwin setup program.
+   Perl is a high-powered programming and "glue" language, a favorite for
+programmers and sysadmins. The latest version is easy to find.[##] If you
+are running Unix, Linux, or Mac OS X, perl is already installed. If you
+have Git for Windows, or Cmder, or Laragon, or XAMPP, perl is installed
+by default. If you have Cygwin, perl is not installed by default, but it
+is easily added by the Cygwin setup program.
 
 [[
 ##. Recommended sites for perl:
- http://www.strawberryperl.com - for Windows
- http://www.activestate.com/activeperl/ - free and commercial versions
- http://www.perl.org/get.html - for Unix/Linux, Mac OS X, Windows
+ http://www.strawberryperl.com - for MS Windows
+ http://www.activestate.com/activeperl/
+ http://www.perl.org/get.html
 ]]
 
    ENDNOTE for perl is available from http://www.pement.org/perl.htm
 Additional documentation for ENDNOTE for perl is available by running the
-command "perldoc [/your/path/to/]endnote.pl" from a shell prompt.
+command "perldoc [/your/path/to/]endnote.pl" from a shell prompt,
+assuming that perldoc was installed with perl.
 
    The syntax for the perl version of ENDNOTE is:
 
-   endnote.pl [-options] source.txt >output.txt
+   perl [-s] endnote.pl [-options] source.txt > output.txt
+   or:
+   endnote.pl [-options] source.txt > output.txt
 
-Switch placement. Note that if any options are used, the -s must also be
-present. The -s must come *before* the script name ("endnote.pl"), but
-the options (prefixed with a hyphen) must come *after* the script name.
+ If you are using a bash shell, you can omit the perl command because the
+first line of "endnote.pl" is a shebang line, allowing the script to find
+the perl interpreter.
+
+SWITCH PLACEMENT. If switches are used, they must come before the name of
+the source file to be processed.
 
   Options:
-    -alt_nm='str'   # use 'str' (literal) as an alternate note marker
+    -alt_nm="str"   # use "str" (literal) as an alternate note marker
     -ignore_errors  # ignore mismatched numbering in endnotes
     -ssnotes        # omit blank line between notes (default: 1 line)
-    -start='n'      # start numbering at 'n' instead of 1
+    -start=n        # start numbering at "n" instead of 1
 
 G. Acknowledgements
 -------------------
@@ -355,7 +366,7 @@ http://df.lth.se/~pi/cpm/files/ftp.mayn.de/pub/cpm/archive/wstar/wsnot134/wsnote
 ]]
 
 -- 
-The ENDNOTE perl and awk scripts were first written in 2002, while I was
+The ENDNOTE perl and awk scripts were first written in 2001, while I was
 a student at North Park University (Chicago).
 
 [[

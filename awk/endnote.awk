@@ -4,14 +4,14 @@
 # Filename: endnote.awk
 #   Author: Eric Pement
 #  Version: 1.44
-#     Date: 2023-11-22 03:36:23 (UTC-0500)
+#     Date: 2023-11-22 14:30:47 (UTC-0500)
 # Copyleft: Free software under the terms of the GNU GPLv3
 #  Purpose: To convert in-text notes and references to endnotes
-#    Needs: Either GNU awk (gawk) or mawk (Michael Brennan's awk)
+#    Needs: any modern awk (gawk, mawk, BWK awk)
 #
 #  Usage:
-#     endnote [-options] source.txt [>output.txt]             # Unix shell
-#     awk -f endnote [-options] source.txt [>output.txt]      # Windows/CMD shell
+#     endnote [-options] source.txt [>output.txt]          # Unix shell
+#     awk -f endnote [-options] source.txt [>output.txt]   # Windows/CMD shell
 #
 #  Options:
 #    -v alt_nm='str'     # use 'str' (literal) as an alternate note marker
@@ -19,9 +19,9 @@
 #    -v ssnotes=1        # omit blank line between notes (default: 1 blank line)
 #    -v start=n          # start numbering at 'n' instead of 1
 #
-# DOS/Windows users must enter "str" (double quotes) in the top option, above.
+# Windows users must enter "str" (double quotes) in the top option, above.
 #
-# Terminology:
+# Terms:
 #   Note Marker: A string in the file to be replaced by incrementing numbers.
 #   Note Body: A line or paragraph of text that corresponds to each Note
 #       Marker, beginning with 1 to 4 pound signs, followed by period, followed
@@ -30,7 +30,7 @@
 #   Note Block: A pair of double brackets [[...]] which contains one or more
 #       Note Bodies and/or nonprinting comments.
 #
-# Default Note Markers:  [#], [##], [###], or [####] (max 4 pound signs)
+# Default Note Markers:  [#], [##], [###], etc.
 #
 # Note Blocks may be either of the following:
 #   [[ #. Single-line style. Opening brackets must appear in column #1. ]]
@@ -102,9 +102,8 @@ function printEndnotes(a_notes,      i_Counter) {
 
     # Increment Note Block: (optional spaces), 1-4 pound signs, period
     # gensub would be easier here, since it supports backreferences, but I want
-    # this code to be compatible with mawk and BWK awk. Very technically, note
-    # that the regex is "#+", since there were problems with {range,addresses}
-    # in non-GNU awk.
+    # this code to be compatible with mawk and BWK awk. Note that the regex has
+    # "#+", since {interval,ranges} require special switches in some awks.
     if ( match($0, /^[ \t]*#+\./) ) {
         sub(/^[ \t]*/, "_=SPLIT=_&")
         sub(/#+\./, ++i_RefCount ".", $0)
@@ -178,7 +177,7 @@ END {
         print "  FATAL ERROR!  "
         print "================"
         print "The number of Note Markers and Note Bodies is not the same!"
-        print "There are",$i_body," Note Markers and",$i_refs,"Note Bodies. The"
+        print "There are", $i_body," Note Markers and", $i_refs,"Note Bodies. The"
         print "Endnote section will not be printed. Quitting here ..."
     }
 }

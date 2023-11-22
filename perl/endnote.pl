@@ -1,10 +1,10 @@
-#!/usr/bin/perl -w -s
+#!/usr/bin/perl -s
 #  Emacs file variables: -*- mode:perl; indent-tabs-mode:nil; tab-width:4; -*-
 #
 # Filename: endnote.pl
 #   Author: Eric Pement
 #  Version: 1.44
-#     Date: 2023-11-22 03:23:48 (UTC-0500)
+#     Date: 2023-11-22 15:30:47 (UTC-0500)
 # Copyleft: Free software under the terms of the GNU GPLv3
 #  Purpose: To convert in-text references and notes to endnotes
 #
@@ -22,7 +22,7 @@
 #
 use strict;
 use vars qw/$start $ssnotes $ignore_errors $alt_nm/;
-# use warnings;
+# use warnings;       # disnabled to avoid warnings about locale not being set
 # use diagnostics;    # requires a full version of perl
 
 my ($i_TextCount, $i_RefCount, $s_Refs, $i_LLcount, $i_RRcount, $errmsg);
@@ -32,7 +32,7 @@ $i_CurrLineNum = $i_BlockEndLineNum = 0;
 $ignore_errors = 0 unless defined $ignore_errors;
 
 if (defined $start and $start !~ /^\d+$/ ) {
-    print STDERR "\aError!\nVariable 'start' was set as $start,"
+    print STDERR "\aError!\nVariable 'start' was set as $start, "
     . "but it must be an integer.\nQuitting here ...\n";
     exit 1;
 }
@@ -100,8 +100,9 @@ will be translated to "[1] [2] [3]" at the beginning of a file. The number of
 pound signs does not control how the numbers appear on output, and numbers
 higher than 9999 are available with [#] alone.
 
-Line-length of the output is probably important, so remember that as Note
-Markers expand to multiple digits, line lengths will also expand. For example,
+Line-length of the output is usually important, so remember that as Note
+Markers expand to multiple digits, overall line length will also expand.
+Therefore:
 
    ape[#] bee[#] cow[#] dog[#] eagle[#] frog[#]
 
@@ -120,14 +121,14 @@ string, not as a regular expression (e.g., you can use '*' if you like).
 
 ENDNOTE lets you enter note text as close to the Note Marker as you wish,
 either within the same paragraph, at the end of the paragraph, or in the
-following paragraph. Whichever you choose, you must enter the references in a
-note block, defined here:
+following paragraph. Whichever you choose, you must put the Note Body inside a
+Note Block, defined as:
 
-  note block  -
+  Note Block  -
       A group of consecutive lines enclosed between "[[" and "]]",
-      containing note bodies, or comments, or both. Note blocks are
-      best placed near the paragraphs with their matching note
-      points, but they can be placed anywhere in the document.
+      containing Note Bodies, or comments, or both. Note Blocks are
+      best placed near the paragraphs with their matching Note
+      Markers, but they can be placed anywhere in the document.
 
 Important: The opening tag "[[" must occur in column #1 or must be preceded
 by nothing but spaces or tabs at the beginning of the line. This is because
@@ -141,88 +142,87 @@ mentioned, there are several ways to construct the note block. Had Beebee and
 Robbins had ENDNOTE available to them, they could have marked up some of
 their paragraphs like this:
 
-=head3 Insert Note Block inside the paragraph
+=head3 (a) Block inside the paragraph
 
-In the following example, Italic type is indicated by the txt2tags markup of
-wrapping italicized words in two slashes "//".
+=over 2
 
    Fortunately, the GNU implementation of the //coreutils// package[#]
    [[ #. Available at ftp://ftp.gnu.org/gnu/coreutils/. ]]
    remedies that deficiency via the //-stable// option: its output for
    this example correctly matches the input.
 
-This is efficient and compact. See thata "[[" and "]]" may occur on a single
-line, as above. It is useful for short notes, but with longer notes of several
-lines, this style breaks up the readability of the paragraph.
+=back
 
-=head3 Append Note Block to the end of the paragraph
+The above works best if "[[" and "]]" will fit on a single line.
 
-Two or more Note Bodies can be included in a Note Block. For legibility, put
-the Note Block to the end of the paragraph. It is a bit more legible if the
-delimiters "[[" and "]]" are on separate lines. Example:
+=head3 (b) Block touches end of paragraph
 
-   The locale name encodes a language, a territory, and optionally, a
-   codeset and a modifier. It is normally represented by a lowercase
-   two-letter ISO 639 language code,[#] an underscore, and an uppercase
-   two-letter ISO 3166-1 country code,[#] optionally followed by a dot and
-   the character-set encoding, and an at-sign and a modifier word.
+=over 2
+
+   Fortunately, the GNU implementation of the //coreutils// package[#]
+   remedies that deficiency via the //-stable// option: its output for
+   this example correctly matches the input.
    [[
-   #. Available at http://www.ics.uci.edu/pub/ietf/http/related/iso639.txt.
-   #. Available at http://userpage.chemie.fu-berlin.de/diverse/doc/ISO_3166.html.
+   #. Available at ftp://ftp.gnu.org/gnu/coreutils/.
    ]]
 
-=head3 Append Note Block as a subsequent paragraph
+=back
 
-Paragraph reformatting usually "wraps" the note block to the end of the
-previous sentence, destroying its formatting. (Remember, "[[" must be the
-first visible characters on a line.)
+In the above, the Note Block markers are put on separate lines. Paragraph
+reformatting usually "wraps" a Note Block to the end of the previous sentence,
+destroying the formatting. Use with care.
 
-Put a blank line between the paragraph and the note block, to avoid accidental
-paragraph reform.
+=head3 (c) Block forms its own paragraph
 
-   The locale name encodes a language, a territory, and optionally, a
-   codeset and a modifier. It is normally represented by a lowercase
-   two-letter ISO 639 language code,[#] an underscore, and an uppercase
-   two-letter ISO 3166-1 country code,[#] optionally followed by a dot and
-   the character-set encoding, and an at-sign and a modifier word.
+=over 2
+
+   Fortunately, the GNU implementation of the //coreutils// package[#]
+   remedies that deficiency via the //-stable// option: its output for
+   this example correctly matches the input.
 
    [[
-   #. Available at http://www.ics.uci.edu/pub/ietf/http/related/iso639.txt.
-   #. Available at http://userpage.chemie.fu-berlin.de/diverse/doc/ISO_3166.html.
+   #. Available at ftp://ftp.gnu.org/gnu/coreutils/.
    ]]
 
-This will not result in an extra line. If a Note Block is preceded and
-followed by a blank line, making the Block a "paragraph" by itself, ENDNOTE
-deletes one of those lines when moving the Block to the end of the file.
+=back
 
-=head1 COMMENTS, BLANK LINES, FORMATTING.
+The above works best for me.
 
-Within Note Blocks, ENDNOTE supports nonprinting comment lines. Lines that
-begin with ".." or "??" or "%" are not printed. This allows writers to add
-comments to themselves which will not appear in the output. A Note Block can
-consist entirely of comment lines.
+Put a blank line between the paragraph and the Note Block. This will not
+result in an extra line in the output, because ENDNOTE deletes one blank line
+when moving the Note Block to the end of the file.
+
+=head1 COMMENTS SUPPORTED
+
+Inside Note Blocks, ENDNOTE supports nonprinting comment lines. Lines that
+begin with ".." or "??" or "%" are not printed. This lets writers add comments
+to themselves which will not appear in the output. A Note Block can consist
+entirely of comment lines.
+
+=head1 BLANK LINES IN NOTE BODIES
 
 A Note Body begins with optional whitespace, 1-4 pound signs, and a period. It
 continues until the next Note Body begins. When the Note Bodies are processed,
 the pound signs are converted to the next expected integer.
 
-Blank lines in the middle of Note Blocks are handled like this:
+Blank lines inside or around Note Bodies are handled like this:
 
 =over 3
 
-=item - All blank lines before the first note body are discarded.
+=item - All blank lines before the first Note Body are discarded.
 
-=item - All blank lines in the middle of a note body are kept intact.
+=item - All blank lines in the middle of a Note Body are kept intact.
 
-=item - All blank lines at the end of a note body are stripped off.
+=item - All blank lines at the end of a Note Body are discarded.
 
 =back
 
 When ENDNOTE runs, it immediately prints the body text and auto-numbers the
-Note Markers, while collecting Note Bodies without printing them. When it
-comes time to print the endnotes, it counts the number of already-printed Note
-Markers and the number of Note Bodies waiting to be printed. If there is a
-mismatch, ENDNOTE aborts with an explanatory error message.
+Note Markers, while putting the Note Bodies into a FIFO array without printing
+them. When it comes time to print the endnotes, it counts the number of
+already-printed Note Markers and the number of Note Bodies waiting to be
+printed (the size of the array). If there is a mismatch, ENDNOTE aborts with
+an explanatory error message.
 
 Otherwise, ENDNOTE prints the following:
 
@@ -278,9 +278,9 @@ Options:
 
 =head1 CREDITS
 
-The idea for this system came from "wsNOTE" by Eric Meyer. wsNOTE was a MS-DOS
-utility for handling both footnotes and endnotes in WordStar files, at a time
-when WordStar supported neither.
+The idea for this system came from "wsNOTE" by Eric Meyer. wsNOTE was a CP/M
+and MS-DOS utility for handling both footnotes and endnotes in WordStar files,
+at a time when WordStar supported neither.
 
 =head1 AUTHOR
 
@@ -288,7 +288,7 @@ Eric Pement
 
 =head1 VERSION
 
-This release of ENDNOTE is version 1.44.
+This release of ENDNOTE is version 1.44
 
 =cut
 
