@@ -40,7 +40,7 @@ if (defined $alt_np and $alt_np =~ /^$/ ) {
     . "it does not have a value assigned to it.\n"
     . "The syntax must be '-alt_np=\"string\"', where \"string\" is "
     . "interpreted as a string literal.\nQuitting here ...\n";
-    exit 1;
+      exit 1;
 }
 
 =head1 NAME

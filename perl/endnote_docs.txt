@@ -1,4 +1,4 @@
-		       ENDNOTE.AWK and ENDNOTE.PL
+                      ENDNOTE.AWK and ENDNOTE.PL
 
       A Practical Method for Handling Endnotes in Text Files
                           by Eric Pement
