@@ -4,7 +4,7 @@
 # Filename: endnote.pl
 #   Author: Eric Pement
 #  Version: 1.44
-#     Date: 2023-11-22 15:30:47 (UTC-0500)
+#     Date: 2023-12-13 13:53:51 (UTC-0500)
 # Copyleft: Free software under the terms of the GNU GPLv3
 #  Purpose: To convert in-text references and notes to endnotes
 #
@@ -70,7 +70,7 @@ marked input file.
 
 =head1 THEORY AND GOAL
 
-The goal of ENDNOTE is to make it easy to edit text files with endnotes using
+The goal of Endnote is to make it easy to edit text files with endnotes using
 a plain text editor like vim, Emacs, Notepad++, etc.
 
 In academia, note references are sequential numbers in square brackets that
@@ -81,12 +81,12 @@ While writing, moving paragraphs containing note references is difficult.
 Microsoft Word handles auto-renumbering, but this is not possible in plain
 text. Some writers resort to the Author-Date citation system (Pement 2023).
 
-To get numbered citations, ENDNOTE requires a markup document with anonymous
+To get numbered citations, Endnote requires a markup document with anonymous
 note markers. ENDNOTES numbers each marker and moves the notes to the end of
-the file. Output goes to screen unless redirected. ENDNOTE offers various ways
+the file. Output goes to screen unless redirected. Endnote offers various ways
 to enter notes into a document. Choose one that works best for you.
 
-At this time, ENDNOTE produces only endnotes, not footnotes.
+At this time, Endnote produces only endnotes, not footnotes.
 
 =head2 INSERT THE NOTE MARKERS
 
@@ -119,7 +119,7 @@ string, not as a regular expression (e.g., you can use '*' if you like).
 
 =head2 INSERT THE NOTE BLOCKS
 
-ENDNOTE lets you enter note text as close to the Note Marker as you wish,
+Endnote lets you enter note text as close to the Note Marker as you wish,
 either within the same paragraph, at the end of the paragraph, or in the
 following paragraph. Whichever you choose, you must put the Note Body inside a
 Note Block, defined as:
@@ -136,11 +136,17 @@ the entire line will be moved when the endnotes are formatted. Likewise, the
 closing tag "]]" cannot be followed by anything else on the line (other than
 spaces or tabs, which will be deleted on output).
 
-Let me illustrate with an example from the book "Classic Shell Scripting," by
-Nelson Beebee and Arnold Robbins (O'Reilly, 2005; ISBN 0-596-00595-4). As
-mentioned, there are several ways to construct the note block. Had Beebee and
-Robbins had ENDNOTE available to them, they could have marked up some of
-their paragraphs like this:
+In a few lightweight markup langages (notably, AsciiDoc, org-mode, MediaWiki,
+TiddlyWiki, and Creole), double square brackets "[[...]]" are used to create
+links to external web content. At this time, the input document cannot support
+both types of markup. (In a future version of Endnote, the double brackets
+will be put into a user-configurable variable.)
+
+Let's look at tag formation with an example from the book "Classic Shell
+Scripting," by Nelson Beebee and Arnold Robbins (O'Reilly, 2005; ISBN
+0-596-00595-4). As mentioned, there are several ways to construct the note
+block. Had Beebee and Robbins had Endnote available to them, they could have
+marked up some of their paragraphs like this:
 
 =head3 (a) Block inside the paragraph
 
@@ -189,12 +195,12 @@ destroying the formatting. Use with care.
 The above works best for me.
 
 Put a blank line between the paragraph and the Note Block. This will not
-result in an extra line in the output, because ENDNOTE deletes one blank line
+result in an extra line in the output, because Endnote deletes one blank line
 when moving the Note Block to the end of the file.
 
 =head1 COMMENTS SUPPORTED
 
-Inside Note Blocks, ENDNOTE supports nonprinting comment lines. Lines that
+Inside Note Blocks, Endnote supports nonprinting comment lines. Lines that
 begin with ".." or "??" or "%" are not printed. This lets writers add comments
 to themselves which will not appear in the output. A Note Block can consist
 entirely of comment lines.
@@ -217,14 +223,14 @@ Blank lines inside or around Note Bodies are handled like this:
 
 =back
 
-When ENDNOTE runs, it immediately prints the body text and auto-numbers the
+When Endnote runs, it immediately prints the body text and auto-numbers the
 Note Markers, while putting the Note Bodies into a FIFO array without printing
 them. When it comes time to print the endnotes, it counts the number of
 already-printed Note Markers and the number of Note Bodies waiting to be
-printed (the size of the array). If there is a mismatch, ENDNOTE aborts with
+printed (the size of the array). If there is a mismatch, Endnote aborts with
 an explanatory error message.
 
-Otherwise, ENDNOTE prints the following:
+Otherwise, Endnote prints the following:
 
    ---------
    ENDNOTES:
@@ -247,15 +253,15 @@ blank line between notes is omitted.
 By default, note numbering always begins with 1. The switch I<start> allows
 notes to begin at any specified integer, including zero.
 
-By default, ENDNOTE halts if the number of Note Bodies does not equal the
-number of Note Markers. The switch I<ignore_errors> causes ENDNOTE to ignore
+By default, Endnote halts if the number of Note Bodies does not equal the
+number of Note Markers. The switch I<ignore_errors> causes Endnote to ignore
 mismatched notes in the body and the endnote section, printing the notes "as
 is" without halting. This switch can be helpful if you need to print a working
 draft and you don't care about mismatched notes.
 
 This switch is also useful if you simply need to number items in a list.
 Set I<alt_nm> to a simple string like '#', use I<ignore_errors>, and
-ENDNOTE will replace each '#' with an incrementing number. If you need to,
+Endnote will replace each '#' with an incrementing number. If you need to,
 you can use I<start> at the same time.
 
 =head1 PERL USAGE
@@ -288,7 +294,7 @@ Eric Pement
 
 =head1 VERSION
 
-This release of ENDNOTE is version 1.44
+This release of Endnote is version 1.44
 
 =cut
 

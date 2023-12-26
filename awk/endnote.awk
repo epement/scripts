@@ -4,7 +4,7 @@
 # Filename: endnote.awk
 #   Author: Eric Pement
 #  Version: 1.44
-#     Date: 2023-11-22 14:30:47 (UTC-0500)
+#     Date: 2023-12-13 13:55:21 (UTC-0500)
 # Copyleft: Free software under the terms of the GNU GPLv3
 #  Purpose: To convert in-text notes and references to endnotes
 #    Needs: any modern awk (gawk, mawk, BWK awk)
@@ -45,6 +45,7 @@
 #   ..  The note marker can be changed with the 'alt_nm' variable.
 #   ]]
 #
+# To-do: put block markers "[[" and "]]" for option switch reassignment.
 BEGIN {
     if ( start && start !~ /^[0-9]+$/ ) {
         print "\aError!\nVariable 'start' was set as " start ", but it",

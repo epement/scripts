@@ -1,7 +1,7 @@
                      ENDNOTE.AWK and ENDNOTE.PL
 
       A Practical Method for Handling Endnotes in Text Files
-                  by Eric Pement (22 November 2023)
+                  by Eric Pement (24 December 2023)
 
    Academic writers often need note documentation in their files. In the
 editing process, it's nice to move, add, or delete paragraphs with note
@@ -67,7 +67,7 @@ this pattern is ignored and automatic numbering does not occur.
 ]]
 
    Below any paragraph with Note Markers, add the documentation items in
-the same order. Predix each note with "#." or "##." to match its
+the same order. Prefix each note with "#." or "##." to match its
 corresponding Note Marker. The notes for that paragraph go inside a Note
 Block delimited by '[[' and ']]', which may be in any of these four
 locations:
@@ -87,14 +87,14 @@ Note Block. The line below is an example.
 
    (c) AFTER THE PARAGRAPH. If you should reformat the paragraph above,
 the "[[" delimiters from the Note Block would very likely be pulled up at
-the end of the word "example." This is bad, because ENDNOTE expects the
+the end of the word "example." This is bad, because Endnote expects the
 "[[" and "]]" to be the first and last visible characters on a line.[##]
 To overcome the consequences of a "reformat paragraph" command, add a
-blank line after the paragraph and put the Note Block below it. ENDNOTE
+blank line after the paragraph and put the Note Block below it. Endnote
 deletes the blank line automatically.
 
 [[
-##. ENDNOTE allows spaces or tabs to precede or follow the "[[" and "]]"
+##. Endnote allows spaces or tabs to precede or follow the "[[" and "]]"
 delimiters, but spaces and tabs are invisible. For the double square
 brackets to work as delimiters, no visible characters can precede or
 follow them.
@@ -112,10 +112,17 @@ break this rule if the situation requires it.
 B. Details on Note Blocks
 -------------------------
 
+   In a few lightweight markup langages (notably, AsciiDoc, org-mode,
+MediaWiki, TiddlyWiki, and Creole), double square brackets "[[...]]" are
+used to create links to external web content. At this time, the input
+document cannot support both types of markup. (In a future version of
+Endnote, the double brackets will be put into variable which can be
+modified with an additional option switch.)
+
    Inside a Note Block---a text block wrapped in "[[" and "]]"
 markers---each Note Body begins with optional whitespace (spaces or
 tabs), followed by 1 to 4 pound signs, followed by a period. That period
-is very important, because if it is missing, ENDNOTE will not consider it
+is very important, because if it is missing, Endnote will not consider it
 a new item for numbering.
 
    The optional whitespace before each Note Body means you do not need to
@@ -130,15 +137,15 @@ for auto-numbering.
 ]]
 
    If you decide to use the in-line form of Note Blocks,[##] the first
-[[ ##. The in-line style looks like this. ]]
+[[##. The in-line style looks like this. ]]
 space after the "[[" is optional, and your numbered references will STILL
 appear flush left in the endnote section. However, if there is more than
 one space after the "[[" marker, the additional space will be copied over
 into the endnote section. Something to remember or experiment with.
 
    If you have multiple notes inside a Note Block, you can omit or keep
-blank lines between the notes. In other words, the following forms will
-produce identical output:
+blank lines between the Note Bodies. In other words, the following forms
+will produce identical output:
 
    {{
    ##. No blank lines between the Note Bodies.
@@ -152,8 +159,8 @@ produce identical output:
    }}
 
    When Note Blocks are collected and formatted, by default one blank
-line is be inserted between each note, even if there are no blank lines
-in the Note Block itself. (This default can be changed.)
+line is inserted between each note, even if there are no blank lines in
+the Note Block itself. (This default can be changed.)
 
    What if your notes contain several long paragraphs? Will they be
 stripped out or tampered with?
@@ -162,7 +169,7 @@ stripped out or tampered with?
 of each note), internal blank lines are kept. Only blank lines *between*
 notes are affected. Blank lines *within* a note are not affected.
 
-   Within a Note Block, ENDNOTE also supports nonprinting comment lines.
+   Within a Note Block, Endnote also supports nonprinting comment lines.
 If a line begins with ".." or "??" or "%" as the first character on the
 line, that line is not printed. This allows writers to add comments to
 themselves which do not appear in the output file.
@@ -193,16 +200,16 @@ you're not watching, the Note Marker will "wrap" to the left margin during
 paragraph reformatting.
 ]]
 
-   ENDNOTE performs a single pass through the document, formatting and
+   Endnote performs a single pass through the document, formatting and
 counting as it goes along. Therefore, it doesn't "know" until it reaches
 the end of file whether the number of Note Markers equals the number of
 Note Bodies for the "Endnotes" section.
 
    If there is a discrepancy between the number of Note Markers and the
-number of Note Bodies, ENDNOTE issues an explanatory error message and
+number of Note Bodies, Endnote issues an explanatory error message and
 quits. (This action can overridden by an option switch.)
 
-   If there is no mismatch, ENDNOTE prints this section header:
+   If there is no mismatch, Endnote prints this section header:
 
       ---------
       ENDNOTES:
@@ -214,7 +221,7 @@ D. Option Switches
 ------------------
 
    The following options are available. The syntax differs depending on
-whether you are using awk or perl to run ENDNOTE. The switch names and
+whether you are using awk or perl to run Endnote. The switch names and
 functions, however, are the same.
 
 D.1. Define the string for Note Markers
@@ -235,13 +242,13 @@ D.3. Define the starting note number
 
    By default, note numbering always begins with 1. If you split a
 document into multiple parts and want the notes for Part 2 to continue
-where Part 1 ended, ENDNOTE has a switch named `start` to begin numbering
+where Part 1 ended, Endnote has a switch named `start` to begin numbering
 at any integer.
 
 D.4. Ignore mismatch between Note Markers and Note Bodies
 
-   By default, ENDNOTE halts if the number of Note Bodies does not equal
-the number of Note Markers. A switch named `ignore_errors` causes ENDNOTE
+   By default, Endnote halts if the number of Note Bodies does not equal
+the number of Note Markers. A switch named `ignore_errors` causes Endnote
 to ignore mismatched notes in the body and the endnote section, printing
 the notes "as is" without halting. This switch can be helpful if you need
 to print a working draft and you don't care about mismatched notes.
@@ -250,18 +257,18 @@ to print a working draft and you don't care about mismatched notes.
 list. Suppose you want to create a list of items beginning with asterisk,
 and you want to organize it freely, and number the list when you're done.
 Set `alt_nm` to a simple string like '*', set the `ignore_errors` switch,
-and ENDNOTE will replace each asterisk with an incrementing number.
+and Endnote will replace each asterisk with an incrementing number.
 
-E. Running ENDNOTE with Awk
+E. Running Endnote with Awk
 ---------------------------
 
-   You must have awk or perl to run ENDNOTE. If you are *only* interested
-in using ENDNOTE and have neither, awk is easier to install and learn.
+   You must have awk or perl to run Endnote. If you are *only* interested
+in using Endnote and have neither, awk is easier to install and learn.
 
    In Windows, install awk by putting one *.exe file on the PATH where
 Windows can find it. Some awk compilations install additional files.
 
-   ENDNOTE will run under any modern awk: GNU awk (gawk), Michael
+   Endnote will run under any modern awk: GNU awk (gawk), Michael
 Brennan's awk (mawk), or Brian W. Kernighan's awk (BWK awk).[##] If you
 have none, GNU awk is a better choice because gawk has more informative
 help and error messages and has ongoing development and support. On the
@@ -281,20 +288,23 @@ https://gitforwindows.org. It is also included with Cygwin.
 BWK awk ("The One True Awk") is at https://github.com/onetrueawk/awk
 ]]
 
-   ENDNOTE for awk is available from http://www.pement.org/awk.htm
+   Endnote for awk is available from http://www.pement.org/awk.htm
 
-   The syntax for the awk version of ENDNOTE is:
+   The syntax for the awk version of Endnote is:
 
    awk [-options] -f endnote.awk source.txt > output.txt
 
+   # If you have bash and have renamed "endnote.awk" to "endnote":
+   endnote [-options] source.txt > output.txt
+
    If the AWKPATH variable is defined, "endnote.awk" can be put in any
-directory in that path, so you can omit using a fully-qualilfied path to
+directory in that path, so you can omit using a fully-qualified path to
 the script. If you are using a bash shell, you can omit the awk command
 also, because the first line of "endnote.awk" is a shebang line, allowing
 the script to find its own interpreter.
 
 SWITCH PLACEMENT. If switches are used, they must come before the name of
-the file to be processed. Each option requires a separate -v switch.
+the text file with the notes. Each option requires a separate -v switch.
 
   Options:
     -v alt_nm="str"     # use "str" (literal) as an alternate note marker
@@ -307,7 +317,7 @@ string will be a single asterisk, use this syntax:
 
    awk -v alt_nm="*"' -v ignore_errors=1 -f endnote.awk in.txt > out.txt
 
-F. Running ENDNOTE with Perl
+F. Running Endnote with Perl
 ----------------------------
 
    Perl is a high-powered programming and "glue" language, a favorite for
@@ -324,23 +334,24 @@ is easily added by the Cygwin setup program.
  http://www.perl.org/get.html
 ]]
 
-   ENDNOTE for perl is available from http://www.pement.org/perl.htm
-Additional documentation for ENDNOTE for perl is available by running the
+   Endnote for perl is available from http://www.pement.org/perl.htm
+Additional documentation for Endnote for perl is available by running the
 command "perldoc [/your/path/to/]endnote.pl" from a shell prompt,
 assuming that perldoc was installed with perl.
 
-   The syntax for the perl version of ENDNOTE is:
+   The syntax for the perl version of Endnote is:
 
    perl [-s] endnote.pl [-options] source.txt > output.txt
-   or:
-   endnote.pl [-options] source.txt > output.txt
 
- If you are using a bash shell, you can omit the perl command because the
+   # If you have bash and have renamed "endnote.pl" to "endnote":
+   endnote [-options] source.txt > output.txt
+
+   If you are using a bash shell, you can omit the perl command because the
 first line of "endnote.pl" is a shebang line, allowing the script to find
 the perl interpreter.
 
 SWITCH PLACEMENT. If switches are used, they must come before the name of
-the source file to be processed.
+the source file containing the text and notes.
 
   Options:
     -alt_nm="str"   # use "str" (literal) as an alternate note marker
@@ -351,7 +362,7 @@ the source file to be processed.
 G. Acknowledgements
 -------------------
 
-   The idea for ENDNOTE was taken from "wsNOTE" by Eric Meyer, the author
+   The idea for Endnote was taken from "wsNOTE" by Eric Meyer, the author
 of VDE (a 16-bit DOS text editor, now freeware).[##] wsNOTE was a CP/M
 and DOS utility for handling footnotes and endnotes in WordStar files,
 when WordStar supported neither.[##] wsNOTE generated WordStar-specific
@@ -366,7 +377,7 @@ http://df.lth.se/~pi/cpm/files/ftp.mayn.de/pub/cpm/archive/wstar/wsnot134/wsnote
 ]]
 
 -- 
-The ENDNOTE perl and awk scripts were first written in 2001, while I was
+The Endnote perl and awk scripts were first written in 2001, while I was
 a student at North Park University (Chicago).
 
 [[
