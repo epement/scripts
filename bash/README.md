@@ -3,6 +3,8 @@
 ## exp
  A high-precision command-line calculator (requires bc)
 
+ Contains embedded help by using the "--help" switch.
+
 ## list_each_field
 
  Given 1 or more lines of delimited input (e.g., CSV file), put each field
@@ -11,6 +13,7 @@
   - This tool does not handle embedded or quoted delimiters. To do that, use
   GNU awk with --csv or perl with Text::CSV
 
+```
 Usage:  list_each_field [-v options] [delimited_data]
 
 Options:  -v delim='x'      # use 'x' for delimiter instead of comma
@@ -18,7 +21,7 @@ Options:  -v delim='x'      # use 'x' for delimiter instead of comma
           -v numberLines=1  # include line numbers with output
           -v startWith=0    # number fields beginning with 0 instead of 1
 
-      Use "\t", "\f", "\v", "\a" for TAB (^I), FF (^L), VT (^K), BEL (^G)
+  Use "\t", "\f", "\v", "\a" for TAB (^I), FF (^L), VT (^K), BEL (^G)
 
 Example:
   $ echo aXb | tr "X" "\t" | list_each_field -v delim="\t"
@@ -38,6 +41,7 @@ Example:
   [0000]: <foo>
   [0001]: <  bar>
   [0004]: <ham and eggs   >
+```
 
 # multi-column-match
 
@@ -58,6 +62,7 @@ multi-column-match v1.5 - A tool to find duplicate or unique records
 
   Input may come from a file on the command line or from standard input.
 
+```
 Usage:  multi-column-match -f "field,list" [-options] [input_file]
 
 REQUIRED:
@@ -75,8 +80,12 @@ Options:
   -u        Show unique, non-duplicated records only
   -v        Verbose output, add summary at end
   -z        Begin field numbers with zero (0), not one (1)
+```
 
 # nonasc
+Bash script to look for different kinds of "non-ASCII" characters in an input file. 
+
+```
 nonasc v2.1b -
   Look for non-printable chars in input. Valid chars are regex[ -~] (0x20-0x7E),
   TAB, CR, and LF. Control codes or graphic chars are considered "non-ASCII".
@@ -103,8 +112,10 @@ Switches:
         If -d is omitted, display a max of NN lines of invalid input.
 
  -h, -?, --help    Display this help message
+```
 
 # paragrep
 
-perl script to search within paragraphs
+perl script to search within paragraphs, and print the entire paragraph if the search expression is found within it. Written in bash, but calls perl to do the heavy lifting.
+
 
