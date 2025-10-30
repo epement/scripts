@@ -1,7 +1,7 @@
                      ENDNOTE.AWK and ENDNOTE.PL
 
       A Practical Method for Handling Endnotes in Text Files
-                  by Eric Pement (24 December 2023)
+                  by Eric Pement (August 2025)
 
    Academic writers often need note documentation in their files. In the
 editing process, it's nice to move, add, or delete paragraphs with note
@@ -21,22 +21,24 @@ by double spacing or single spacing, whichever you prefer.
 
 Vocabulary:
 
-   Note references are the digits which often appear as smaller, superior
-   numbers, but which may appear in '[square brackets]' in the text body.
-   In plain text, superior figures are not available, so our note
-   references will go in square brackets.
+   Note references are digits which in typeset printing usually appear as
+   smaller, superior numbers at the end of a sentence or clause. Less
+   frequently, such references are put inside '[square brackets]' in the
+   text without changing the font size. In an ASCII text file without font
+   formatting codes, superior figures are not possible, so note references
+   must be put inside square brackets.
 
    Notes are the documentation items themselves, which generally list an
    author, title, year of publication, page numbers, etc., but which may
    be words of explanation or abbreviated secondary references.
 
    These terms are special: Note Marker, Note Body, and Note Block.
- 
+
    Note Markers are things which become note references after processing.
 
    A Note Body is a note, prefixed by "#." or "##.", matching the
    corresponding Note Marker above it. A Note Body can contain full
-   sentences or paragraphs. It can also be a single line.
+   sentences or multiple paragraphs. It can also be a single line.
 
    A Note Block is a group of sequential Note Bodies, delimited before
    and after or else above and below by 2 consecutive square brackets,
@@ -112,12 +114,12 @@ break this rule if the situation requires it.
 B. Details on Note Blocks
 -------------------------
 
-   In a few lightweight markup langages (notably, AsciiDoc, org-mode,
+   In some lightweight markup langages (notably, AsciiDoc, Emacs org-mode,
 MediaWiki, TiddlyWiki, and Creole), double square brackets "[[...]]" are
 used to create links to external web content. At this time, the input
 document cannot support both types of markup. (In a future version of
 Endnote, the double brackets will be put into variable which can be
-modified with an additional option switch.)
+modified by an option switch.)
 
    Inside a Note Block---a text block wrapped in "[[" and "]]"
 markers---each Note Body begins with optional whitespace (spaces or
@@ -346,9 +348,9 @@ assuming that perldoc was installed with perl.
    # If you have bash and have renamed "endnote.pl" to "endnote":
    endnote [-options] source.txt > output.txt
 
-   If you are using a bash shell, you can omit the perl command because the
-first line of "endnote.pl" is a shebang line, allowing the script to find
-the perl interpreter.
+   If you are using a bash shell, you can omit the perl command because
+the first line of "endnote.pl" is a shebang line, allowing the script to
+find perl to run the script.
 
 SWITCH PLACEMENT. If switches are used, they must come before the name of
 the source file containing the text and notes.
