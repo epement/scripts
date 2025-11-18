@@ -2,32 +2,37 @@
 #
 # filename: exp
 #   author: Eric Pement
-#     date: 2023-11-09 12:55:08 (UTC-0500)
-# requires: bc, perl, fold, sed
+#     date: 2025-05-15 15:14:49 (UTC-0400)
+# requires: bc, perl, fold, sed, clip
 #
 # history:
+# 2.12: add -C to copy answer to Windows clipboard
+# 2.11: look for /[a-z][a-z]/ quoting error
 # 2.10: allow MSYS to use Cygwin version of bc
-#  2.9: check for required files
+#  2.9: check for required executable files
 #  2.8: added comment for sqrt
-VERSION="2.10"
+VERSION="2.12"
 PRG=$(basename $0)
 
-# Full path to these programs must be defined here
+# Full path to these programs must be defined below. Both Cygwin and MSYS
+# have these programs in /bin by default.
 fold="/bin/fold"
 perl="/bin/perl"
 sed="/bin/sed"
 
+# /bin/bc is not installed in MSYS (Git for Windows) by default. It must be
+# installed manually with Cygwin. Tell MSYS to use the Cygwin version.
 if [[ $(uname -o) == 'Msys' ]]; then
-    bc='/c/cygwin64/bin/bc'     # MSYS can use the Cygwin version of bc
+    bc='/c/cygwin64/bin/bc'
 else
-    bc='/bin/bc'                # binary calculator
+    bc='/bin/bc'
 fi
 
-# check required programs
-[[ -x $bc ]]   || { echo "FATAL: $bc not found or not executable!"; exit 1; }
+# check required programs just defined above
 [[ -x $fold ]] || { echo "FATAL: $fold not found or not executable!"; exit 1; }
 [[ -x $perl ]] || { echo "FATAL: $perl not found or not executable!"; exit 1; }
 [[ -x $sed ]]  || { echo "FATAL: $sed not found or not executable!"; exit 1; }
+[[ -x $bc ]]   || { echo "FATAL: $bc not found or not executable!"; exit 1; }
 
 function usage {
   cat <<EOF
@@ -36,6 +41,7 @@ $PRG - a high-precision command-line calculator (v$VERSION)
 Syntax:   $PRG [-options] MATH_EXPRESSION
 Options:
    -c     commify (add commas every 3 digits and wrap long lines)
+   -C     also copy the answer to the Windows clipboard
    -h     issue this help message
    -p N   change precision to N decimal places (default: 5)
    -w N   change output width in wrapping long lines (default: 80)
@@ -62,6 +68,17 @@ Examples:
   $PRG 'sqrt (41.5^2 + 12^2)'      # parens required for sqrt(n)
 
 EOF
+
+if [[ $(uname -o) == 'Msys' ]]; then
+  cat <<ADDME
+If running under CMD or TCC, the caret (^) is a quote character, so it
+must be doubled (^^) to be seen as a single char, even if \`backticks\`
+are used. Use "double quotes" to hide the caret.
+  $PRG "sqrt (41.5^2 + 12^2)"      # double quote marks work best
+  $PRG 'sqrt (41.5^^2 + 12^^2)'    # use 2 carets with backticks
+ADDME
+fi
+
 }
 
 # Trivia: Note that 355/113 is pi, correct to 6 decimal places, much
@@ -76,12 +93,15 @@ fi
 # set defaults
 SCALE=5
 WIDTH=80
+CLIPBD=0
 
 # parse options. Putting a colon at the head of the string causes getopts to
 # run in silent mode. Options p and w require arguments
-while getopts ":chp:w:" opt; do
+while getopts ":cChp:w:" opt; do
   case $opt in
     c) COMMIFY=1
+       ;;
+    C) CLIPBD=1
        ;;
     h) usage
        exit
@@ -102,24 +122,41 @@ shift $(($OPTIND - 1))
 # if modulus (%) is in the command line, set the $SCALE to zero
 [[ "$*" = *%* ]] && SCALE=0
 
+# permit 'sqrt', but nothing else
+if [[ "$*" = *sqrt* ]]; then
+    :
+elif [[ "$*" = *[a-zA-Z][a-zA-Z]* ]]; then
+    echo "ERROR: Unexpected letters found in calculation string!"
+    echo ">>>  $*"
+    echo
+    echo "Wrap special symbols like '*' in QUOTES. Quitting ..."
+    exit 1
+fi
+
 # strip commas from input (they cause errors), convert 'x' into asterisk
-INPUT=$(echo "$*" | $sed 's/,//g; s/x/*/g' )
+INPUT=$( echo "$*" | $sed 's/,//g; s/x/*/g' )
 
 # echo DIAG: scale = "[$SCALE]", INPUT = "[$INPUT]", WIDTH = "[$WIDTH]"
 # echo DIAG: star is "[$*]"
 
 if (( $COMMIFY )); then
-  echo "scale=$SCALE; $INPUT" |
-   BC_LINE_LENGTH=262144 $bc | $perl -ne '
-    $line = reverse $_;
-    $line =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/g;
-    $line = reverse $line;
-    $line =~ s/^(\d+),/" " x eval(3 - length($1)) . "$1,"/e;
-    print "$line\n";
-  ' | $fold -$WIDTH
+  ANSW=$( echo "scale=$SCALE; $INPUT" |
+    BC_LINE_LENGTH=262144 $bc | $perl -ne '
+      $line = reverse $_;
+      $line =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/g;
+      $line = reverse $line;
+      $line =~ s/^(\d+),/" " x eval(3 - length($1)) . "$1,"/e;
+      print "$line\n";
+    ' | $fold -$WIDTH )
 else
-  echo "scale=$SCALE; $INPUT" | BC_LINE_LENGTH=$WIDTH $bc
+  ANSW=$( echo "scale=$SCALE; $INPUT" | BC_LINE_LENGTH=$WIDTH $bc )
 fi
+
+# always show the answer. Double quotes needed to preserve line breaks
+echo "$ANSW"
+
+# Windows clipboard tool is on the PATH at "c:/Windows/System32/clip.exe"
+(( $CLIPBD )) && echo "$ANSW" | "clip.exe"
 
 # perl commify script explanation
 #--------------------------------------------------------------
