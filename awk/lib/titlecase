@@ -1,8 +1,8 @@
 # filename: titlecase
 #   author: Eric Pement
-#  version: 1.25
-#     date: 2004-02-25, 2011-04-01, 2020-06-26
-# requires: GNU awk
+#  version: 1.26
+#     date: 2004-02-25, 2011, 2020, 2025-11-27
+# requires: GNU awk, due to gensub()
 #
 # Purpose:
 #   This is a function for taking a string in "ALL CAPS", "lowercase", or
@@ -47,22 +47,30 @@
 #  - Contractions such as I'll, You've, Don't, etc. are handled properly
 #  - Degrees such as Ph.D., M.Div., etc. are properly capitalized
 #
-# Sample Usage with GNU awk (gawk):
+# Sample Usage with awk or gawk (GNU awk)
+# --------------------------------------
+# Requires an environment variable AWKPATH to be set as a colon-separated
+# "/list:/of/directories/" under Linux (if under Windows, separated by
+# semicolons), and "titlecase" to be in one of those directories.
 #
-#   (1) Simple use. To change each line of "infile" and redirect the result
-#   to "outfile", do this (variable 'r' stands for result):
+# (1) Change each line of piped input or SOMEFILE
 #
-#   awk -f titlecase -W source="{print r}" infile >outfile
+#   echo "sample title" | awk -f titlecase -e "{print r}"  # handle piped input
+#   awk -f titlecase -e "{print r}" SOMEFILE               # results go to screen
+#   awk -f titlecase -e "{print r}" SOMFILE >NEWFILE       # results go to NEWFILE
 #
-#   (2) Complex use. To alter particular fields or substrings, use a
-#   separate awk script. Below is a sample of using 2 scripts from a
-#   command prompt under Microsoft Windows:
+# (2) Complex use. To alter particular fields or substrings, use a separate
+# awk script. Below is a sample of using an awk script and a CSV data file
+# from a Microsoft Windows command prompt:
 #
-#   --------------------------------------------------------------
+# --------------------------------------------------------------
 #   [c:\tmp]type infile
 #   JOHN DOE,123 MAIN ST.,CHICAGO,IL,12345
 #   OLD MACDONALD,456 FARM HWY.,PEORIA,IL,23456
 #   TIM O'REILLY,P.O. BOX 789,LOS ANGELES,CA,34567
+#
+#   :: Note that the CSV data above is in SOLID CAPS. We want to change just
+#   :: the first 2 fields. The script below will do that.
 #
 #   [c:\tmp]type myfile.awk
 #   {
@@ -77,15 +85,16 @@
 #   John Doe,123 Main St.,CHICAGO,IL,12345
 #   Old MacDonald,456 Farm Hwy.,PEORIA,IL,23456
 #   Tim O'Reilly,P.O. Box 789,LOS ANGELES,CA,34567
-#   --------------------------------------------------------------
+# --------------------------------------------------------------
 #
-# Availability of GNU awk:
-#   gawk for windows: http://gnuwin32.sourceforge.net/packages/gawk.htm
-#   precompiled awks: http://www.klabaster.com/freeware.htm#mawk
-#   general links:    http://dmoz.org/Computers/Programming/Languages/Awk/
+# Precompiled binaries of GNU awk for Windows:
+#  gawk v5.3.2: https://sourceforge.net/projects/ezwinports/files/
+#  gawk v5.3.0: http://vkiefel.de/compiled-SW.html
+#  gawk v4.1.4: https://klabaster.com/freeware.htm
 #
 # CHANGELOG:
-# 1.25 - Reactivate the main function
+# 1.26 - Deactivate printing each line; update internal comments and links
+# 1.25 - Activate titlecase() to print each line
 # 1.24 - Remove filename extension, comment out the "main" section.
 # 1.23 - Reformats $0 (current line) and stores it in 'r' w/o changing $0.
 # 1.22 - Added a new switch to accept all 2-letter abbreviations of US State
@@ -278,6 +287,8 @@ function titlecase(string,x)  {
   # Although storing it in r, we are not required to use 'r', and
   # creating 'r' does not change the value of $0.
   r = titlecase($0)
-  print r
+
+  # To acvtivate titlecase for all lines, uncomment the next command
+  # print r
 }
 #---end of awk script---
