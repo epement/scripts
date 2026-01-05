@@ -1,13 +1,53 @@
 # Endnote
 
-The files in this directory describe a simple way of creating, managing,
-and formatting endnotes in plain text (ASCII) documents.
+Endnote is a lightweight, simple system I created several years ago
+for editing and printing textfiles with documentation (footnotes, endnotes,
+academic references). The goal was for me to have a source document where
+if I moved sections, paragraphs, or added or deleted text and notes, I
+would not have to renumber everything. I wanted sequential notes.
 
-This method uses a *very* lightweight markup system for indicating note
-references in a text file. The user employs a script to number the
-references, collect the note bodies, and move them to the end of the text
-document.
+I also wanted to have a way to embed personal remaks to myself---usually
+a reminder to check the facts or spelling on something, or to include
+text blocks that I wanted to keep but weren't good enough to publish.
+I _prefer_ page-bottom footnotes, but my need for simplicity forced me
+to write it as document-bottom endnotes. That was the origin of Endnote.
 
-At the present time (December 2023), the Endnote conversion script exists
+This method uses a *very* lightweight markup system for putting note
+references and comments in a text file. I call it ENDNT markup language.
+
+Two fundamental elements are used:
+
+(1) Note markers are indicated by "[#]" or "[##]", up to "[####]", right
+after anything that needs to be documented or footnoted. The markers are
+replaced with incrementing digits "[1]", "[2]", "[3]", etc.
+
+(2) Note blocks begin with "[[" in column 1 and end with a matching "]]",
+which must be the two last characters on the line. Note blocks should be
+put under the corresponding note markers, ideally in the same or next
+paragraph.
+
+Between the two double-brackets, there are a few rules or expectations
+for formatting notes or comments. 
+
+A simple awk or perl script is used to pass through the source document,
+where it converts the ambiguous note markers into incrementing numbers,
+extracts all the [[double-bracket note blocks]], stuffing them into a
+temporary memory variable, and then printing them out nicely as
+"ENDNOTES" at the very end of the document.
+
+As mentioned earlier, the note blocks can also contain comments. Anything
+marked as a comment is omitted from the output.
+
+At the present time (January 2026), the Endnote conversion script exists
 for two common languages, awk and perl.
+
+To assist in wider distribution, I have included a Windows batch file,
+"endnote.cmd", needing manual configuration. Not much, though: tell
+it where perl or awk are, and edit the location of the perl or awk
+scripts. Type "endnote --help" or "endnote --summary" for a brief
+reminder of the syntax.
+
+[end]
+
+
 
