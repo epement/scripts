@@ -3,8 +3,8 @@
 #
 # Filename: endnote.pl
 #   Author: Eric Pement
-#  Version: 1.44
-#     Date: 2023-12-13 13:53:51 (UTC-0500)
+#  Version: 1.45
+#     Date: 2026-01-10 11:13:50 (UTC-0500)
 # Copyleft: Free software under the terms of the GNU GPLv3
 #  Purpose: To convert in-text references and notes to endnotes
 #
@@ -25,9 +25,9 @@ use vars qw/$start $ssnotes $ignore_errors $alt_nm/;
 # use warnings;       # disnabled to avoid warnings about locale not being set
 # use diagnostics;    # requires a full version of perl
 
-my ($i_TextCount, $i_RefCount, $s_Refs, $i_LLcount, $i_RRcount, $errmsg);
+my ($i_MarkCount, $i_NoteCount, $s_Refs, $i_LLcount, $i_RRcount, $errmsg);
 my (@notes, $b_BlankLine, $b_BlankBeforeBlock, $i_CurrLineNum, $i_BlockEndLineNum);
-$i_TextCount = $i_RefCount = $i_LLcount = $i_RRcount = 0;
+$i_MarkCount = $i_NoteCount = $i_LLcount = $i_RRcount = 0;
 $i_CurrLineNum = $i_BlockEndLineNum = 0;
 $ignore_errors = 0 unless defined $ignore_errors;
 
@@ -54,19 +54,19 @@ marked input file.
 
  Note references - The digits in a printed document which usually appear in
      superscript or in [square brackets]. In plain ASCII, superscript is not
-     available, so note references occur inside square brackets.
+     available, so note references usually occur inside square brackets.
 
  Note Markers - Identical strings which will be changed to incrementing
-     numbers (note references) after the file is processed.
+     numbers in square brackets (note references) after the file is processed.
 
  Note - A citation or documentation item referred to by a note reference. It
-     may be as short as "Ibid." or as long as several paragraphs.
+     may be as short as "Ibid." or as long as several paragraphs. After
+     formatting, the notes will be prefixed by numbers, but in the source
+     (editing) document, each note is prefixed by "#." or "##." at the
+     beginning of the line.
 
- Note Body - A note (above), prefixed by "#." or "##." at the beginning of
-     the line.
-
- Note Block - A group of one or more note bodies, enclosed before and after
-     by 2 consecutive square brackets, as "[[" and "]]".
+ Note Block - A group of one or more notes and/or comments, enclosed before
+     and after by 2 consecutive square brackets, as "[[" and "]]".
 
 =head1 THEORY AND GOAL
 
@@ -79,10 +79,11 @@ or the end of the document ("endnotes"), usually citing a source.
 
 While writing, moving paragraphs containing note references is difficult.
 Microsoft Word handles auto-renumbering, but this is not possible in plain
-text. Some writers resort to the Author-Date citation system (Pement 2023).
+text. Some writers resort to the Author-Date citation system (e.g., "Knuth
+1973").
 
 To get numbered citations, Endnote requires a markup document with anonymous
-note markers. ENDNOTES numbers each marker and moves the notes to the end of
+note markers. Endnote numbers each marker and moves the notes to the end of
 the file. Output goes to screen unless redirected. Endnote offers various ways
 to enter notes into a document. Choose one that works best for you.
 
@@ -104,14 +105,14 @@ Line-length of the output is usually important, so remember that as Note
 Markers expand to multiple digits, overall line length will also expand.
 Therefore:
 
-   ape[#] bee[#] cow[#] dog[#] eagle[#] frog[#]
+   ape[#], bee[#], cow[#], dog[#], eagle[#], and frog[#]
 
-with sufficient previous notes might expand into:
+with sufficient previous notes in the source file might expand to:
 
-   ape[1512] bee[1513] cow[1514] dog[1515] eagle[1516] frog[1517]
+   ape[1512], bee[1513], cow[1514], dog[1515], eagle[1516], and frog[1517]
 
-You may switch from [#] to [##] at any time. I normally use [##] for most of
-my writing, since I rarely have more than 99 footnotes in one file.
+You may switch from [#] to [##] at any time. I often use [##] because I rarely
+have more than 99 footnotes in one file.
 
 The option "-alt_nm=I<string>" allows setting the note marker to a string other
 than "[#]" and its relatives. This string will be interpreted as a literal
@@ -119,16 +120,16 @@ string, not as a regular expression (e.g., you can use '*' if you like).
 
 =head2 INSERT THE NOTE BLOCKS
 
-Endnote lets you enter note text as close to the Note Marker as you wish,
+Endnote lets you enter the Notes as close to the Note Marker as you wish,
 either within the same paragraph, at the end of the paragraph, or in the
-following paragraph. Whichever you choose, you must put the Note Body inside a
-Note Block, defined as:
+following paragraph. Whichever you choose, all Notes must go inside a Note
+Block, defined as:
 
   Note Block  -
       A group of consecutive lines enclosed between "[[" and "]]",
-      containing Note Bodies, or comments, or both. Note Blocks are
-      best placed near the paragraphs with their matching Note
-      Markers, but they can be placed anywhere in the document.
+      containing Notes or comments or both. Note Blocks are best
+      placed near the paragraphs with their matching Note Markers,
+      but they can be placed anywhere in the document.
 
 Important: The opening tag "[[" must occur in column #1 or must be preceded
 by nothing but spaces or tabs at the beginning of the line. This is because
@@ -144,9 +145,9 @@ will be put into a user-configurable variable.)
 
 Let's look at tag formation with an example from the book "Classic Shell
 Scripting," by Nelson Beebee and Arnold Robbins (O'Reilly, 2005; ISBN
-0-596-00595-4). As mentioned, there are several ways to construct the note
-block. Had Beebee and Robbins had Endnote available to them, they could have
-marked up some of their paragraphs like this:
+0-596-00595-4). As mentioned, there are several ways to construct the Note
+Block. If Beebee and Robbins were using Endnote, they could have marked up
+some of their paragraphs like this:
 
 =head3 (a) Block inside the paragraph
 
@@ -159,7 +160,7 @@ marked up some of their paragraphs like this:
 
 =back
 
-The above works best if "[[" and "]]" will fit on a single line.
+The syntax above works best if "[[" and "]]" fits on a single line.
 
 =head3 (b) Block touches end of paragraph
 
@@ -201,63 +202,65 @@ when moving the Note Block to the end of the file.
 =head1 COMMENTS SUPPORTED
 
 Inside Note Blocks, Endnote supports nonprinting comment lines. Lines that
-begin with ".." or "??" or "%" are not printed. This lets writers add comments
-to themselves which will not appear in the output. A Note Block can consist
-entirely of comment lines.
+begin with ".." or "??" or "%" in column 1 are not printed. This lets writers
+add comments to themselves which will not appear in the output. A Note Block
+can consist entirely of comment lines.
 
-=head1 BLANK LINES IN NOTE BODIES
+=head1 BLANK LINES IN NOTES
 
-A Note Body begins with optional whitespace, 1-4 pound signs, and a period. It
-continues until the next Note Body begins. When the Note Bodies are processed,
-the pound signs are converted to the next expected integer.
+Notes must begin with 1-4 pound signs followed by a dot as the first visible
+character on the line. One pound sign is sufficient to accommodate thousands
+of endnotes. Leading spaces or indents are preserved. When Endnote processes
+the document, the pound signs are converted to the next expected integer.
 
-Blank lines inside or around Note Bodies are handled like this:
+Blank lines inside or around Notes are handled like this:
 
 =over 3
 
-=item - All blank lines before the first Note Body are discarded.
+=item - All blank lines before the first Note are discarded.
 
-=item - All blank lines in the middle of a Note Body are kept intact.
+=item - All blank lines in the middle of a Note are kept intact.
 
-=item - All blank lines at the end of a Note Body are discarded.
+=item - All blank lines at the end of a Note are discarded.
 
 =back
 
 When Endnote runs, it immediately prints the body text and auto-numbers the
-Note Markers, while putting the Note Bodies into a FIFO array without printing
-them. When it comes time to print the endnotes, it counts the number of
-already-printed Note Markers and the number of Note Bodies waiting to be
-printed (the size of the array). If there is a mismatch, Endnote aborts with
-an explanatory error message.
+Note Markers, while putting the Notes into a FIFO array without printing them.
+Endnotes counts the number of already-printed Note Markers and the number of
+Notes waiting to be printed (the size of the array). At the end of the file,
+if there is a mismatch, Endnote aborts with an explanatory error message.
 
 Otherwise, Endnote prints the following:
 
    ---------
    ENDNOTES:
 
-followed by the collected array of Note Bodies. The "[[" and "]]" markers
-around the Note Block are discarded.
+followed by the collected array of Notes. The "[[" and "]]" markers that
+surrounded the Note Block are discarded.
 
 =head1 OPTIONS
 
-By default, Note Markers in the text are indicated by [#], [##], etc. You may
-use something simpler, such as '*' (asterisk), by the switch I<alt_nm>.
+By default, Note Markers in the body text are indicated by [#], [##], etc. You
+may use something simpler, such as '*' (asterisk), by the switch I<alt_nm>.
 The characters will be interpreted as literal strings, not as regular
-expressions or metacharacters.
+expressions or metacharacters. The alternate note marker switch only affects
+the I<markers>; it does not alter the formatting of Notes and Note Blocks.
 
-By default, one blank line is automatically inserted after each Note Body
-(double-spacing between notes, which is not the same as double-spacing each
-note). If a switch is passed for I<ssnotes> (single-spaced notes), the
+By default, one blank line is automatically inserted after each Note
+(double-spacing between notes, which is not the same as double-spacing the
+entire note). If a switch is passed for I<ssnotes> (single-spaced notes), the
 blank line between notes is omitted.
 
 By default, note numbering always begins with 1. The switch I<start> allows
 notes to begin at any specified integer, including zero.
 
-By default, Endnote halts if the number of Note Bodies does not equal the
-number of Note Markers. The switch I<ignore_errors> causes Endnote to ignore
-mismatched notes in the body and the endnote section, printing the notes "as
-is" without halting. This switch can be helpful if you need to print a working
-draft and you don't care about mismatched notes.
+By default, Endnote halts if the number of Notes does not equal the number
+of Note Markers. By the end of the file, the Note References will already
+be numbered and printed, and Endnote will indentify the mismatch counts. The
+switch I<ignore_errors> causes Endnote to ignore mismatch, printing the notes
+"as is" without halting. This switch can be helpful if you need to print a
+working draft and you don't care about mismatched notes.
 
 This switch is also useful if you simply need to number items in a list.
 Set I<alt_nm> to a simple string like '#', use I<ignore_errors>, and
@@ -272,8 +275,12 @@ Normal syntax:
 or
    perl [-s] endnote.pl [-options] source.txt > output.txt
 
+The option "-s" before the script name ("endnote.pl") enables Perl to do
+rudimentary switch parsing, so the "-s" is needed only if other options will
+be used. However, using "-s" without options will not cause an error.
+
 Switch placement. Note that B<-s> comes I<before> the script name, but the
-options prefixed with a hyphen come I<after> the script name.
+options prefixed with a single hyphen come I<after> the script name.
 
 Options:
 
@@ -294,14 +301,14 @@ Eric Pement
 
 =head1 VERSION
 
-This release of Endnote is version 1.44
+This release of Endnote is version 1.45
 
 =cut
 
-# $i_TextCount counts note markers in the body of the main text.
-# $i_RefCount counts note items in the endnote body at the end.
+# $i_MarkCount counts Note Markers in the body of the main text.
+# $i_NoteCount counts Notes that will become endnotes at the end.
 # Use $start to set an initial note number other than 1.
-$i_TextCount = $i_RefCount = (defined $start ? $start - 1 : 0);
+$i_MarkCount = $i_NoteCount = (defined $start ? $start - 1 : 0);
 
 # quote special characters in alternate note markers
 $alt_nm =~ s/[.?*+([$@%&`\\]/\\$&/g if defined $alt_nm;
@@ -320,7 +327,7 @@ LINE: while (<>) {
         s/^\s*\[\[ ?//;              # strip leading [[
 
         # Increment note block: (optional spaces), 1-4 pound signs, period
-        s/^(\s*)#{1,4}(?=\.)/"_=SPLIT=_$1" . ++$i_RefCount/ge;
+        s/^(\s*)#{1,4}(?=\.)/"_=SPLIT=_$1" . ++$i_NoteCount/ge;
 
         # Is the closing marker, ]], on this line?
         if ( s/\s*]]\s*$// ) {
@@ -337,8 +344,14 @@ LINE: while (<>) {
 
         next if $. == ($i_BlockEndLineNum + 1) and $b_BlankLine and $b_BlankBeforeBlock;
 
-        s/\[#{1,4}]/"[" . ++$i_TextCount . "]"/ge;       # increment [#]
-        s/$alt_nm/++$i_TextCount/ge if defined $alt_nm;
+        if ( defined $alt_nm ) {
+            # Increment alternate note markers INSTEAD of normal markers
+            s/$alt_nm/++$i_MarkCount/ge;
+        }
+        else {
+            # Increment normal markers
+            s/\[#{1,4}]/"[" . ++$i_MarkCount . "]"/ge;
+        }
 
         # NB: Must be positioned _after_ the if() block above.
         $b_BlankBeforeBlock = m/^\s*$/ ? "Y" : "";
@@ -359,13 +372,13 @@ sub printEndnotes {
 
 }
 
-if ( $i_TextCount == $i_RefCount or $ignore_errors) {  # note markers/bodies match
+if ( $i_MarkCount == $i_NoteCount or $ignore_errors) {  # Markers and Notes match
 
     # Convert to array to handle single- or double-spacing on output
     @notes = split '_=SPLIT=_', $s_Refs if $s_Refs;
 
     # print ENDNOTES header only if notes exist.
-    if ( $i_RefCount ) {
+    if ( $i_NoteCount ) {
         print "\n---------\nENDNOTES:\n\n";
         printEndnotes();
         print "[end of file]\n";
@@ -390,8 +403,8 @@ if ( $i_TextCount == $i_RefCount or $ignore_errors) {  # note markers/bodies mat
 }
 else {
 
-    my $i_body = defined $start ? $i_TextCount - $start : $i_TextCount ;
-    my $i_refs = defined $start ? $i_RefCount - $start  : $i_RefCount ;
+    my $i_body = defined $start ? $i_MarkCount - $start : $i_MarkCount ;
+    my $i_refs = defined $start ? $i_NoteCount - $start  : $i_NoteCount ;
 
     ($errmsg = <<"    FINIS") =~ s/^[ \t]+//gm;
     \a\a
@@ -399,9 +412,9 @@ else {
     ================
       FATAL ERROR!
     ================
-    The number of Note Markers and Note Bodies is not the same!
-    There are $i_body Note Markers and $i_refs Note Bodies. The
-    Endnote section will not be printed. Quitting here ...
+    The number of Note Markers and Notes is not the same! There
+    are $i_body Note Markers and $i_refs Notes. The Endnote section
+    will not be printed. Quitting here ...
 
 
     FINIS
