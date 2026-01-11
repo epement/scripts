@@ -18,24 +18,24 @@ references and comments in a text file. I call it ENDNT markup language.
 Two fundamental elements are used:
 
 (1) Note markers are indicated by "[#]" or "[##]", up to "[####]", right
-after anything that needs to be documented or footnoted. The markers are
-replaced with incrementing digits "[1]", "[2]", "[3]", etc.
+after anything that needs to be documented or footnoted. Endnote will replace
+the markers with incrementing digits "[1]", "[2]", "[3]", etc.
 
 (2) Note blocks begin with "[[" in column 1 and end with a matching "]]",
 which must be the two last characters on the line. Note blocks should be
-put under the corresponding note markers, ideally in the same or next
+put under the corresponding Note Markers, ideally in the same or next
 paragraph.
 
 Between the two double-brackets, there are a few rules or expectations
-for formatting notes or comments. 
+for formatting Notes or Comments. 
 
 A simple awk or perl script is used to pass through the source document,
-where it converts the ambiguous note markers into incrementing numbers,
-extracts all the [[double-bracket note blocks]], stuffing them into a
-temporary memory variable, and then printing them out nicely as
-"ENDNOTES" at the very end of the document.
+where it converts the ambiguous Note Markers into incrementing numbers,
+extracts all the [[ double-bracket note blocks ]], stuffs them into a
+temporary memory variable, and then prints them out nicely below an
+"ENDNOTES" subtitle at the very end of the document.
 
-As mentioned earlier, the note blocks can also contain comments. Anything
+As mentioned earlier, the Note Blocks can also contain Comments. Anything
 marked as a comment is omitted from the output.
 
 At the present time (January 2026), the Endnote conversion script exists
@@ -46,6 +46,9 @@ To assist in wider distribution, I have included a Windows batch file,
 it where perl or awk are, and edit the location of the perl or awk
 scripts. Type "endnote --help" or "endnote --summary" for a brief
 reminder of the syntax.
+
+I recently updated the batch file to allow the user to choose between awk and
+perl if both are installed and on the Windows path.
 
 [end]
 
