@@ -4,13 +4,13 @@
 # Filename: endnote.pl
 #   Author: Eric Pement
 #  Version: 1.45
-#     Date: 2026-01-10 11:13:50 (UTC-0500)
+#     Date: 2026-01-11 01:14:13 (UTC-0500)
 # Copyleft: Free software under the terms of the GNU GPLv3
 #  Purpose: To convert in-text references and notes to endnotes
 #
 #  Usage:
 #     endnote.pl [-options] source.txt >output.txt
-#     perl [-s] endnote.pl [-options] source.txt >output.txt
+#     [/path/to/]perl endnote.pl [-options] source.txt >output.txt
 #
 # Options
 #   -alt_nm='str'   # use 'str' (literal) as an alternate note marker
@@ -273,14 +273,14 @@ Normal syntax:
 
    endnote.pl [-options] source.txt > output.txt
 or
-   perl [-s] endnote.pl [-options] source.txt > output.txt
+   [/path/to/]perl endnote.pl [-options] source.txt > output.txt
 
-The option "-s" before the script name ("endnote.pl") enables Perl to do
-rudimentary switch parsing, so the "-s" is needed only if other options will
-be used. However, using "-s" without options will not cause an error.
-
-Switch placement. Note that B<-s> comes I<before> the script name, but the
-options prefixed with a single hyphen come I<after> the script name.
+Endnote uses "-s" in the first line of the Perl script to enable rudimentary
+switch parsing. Using no switches will not cause an error. Because this is
+"rudimentary" parsing, Endnote does not complain if a switch is misspelled.
+Using the core Getopt::Long module would fix this, but it would also prevent
+Endnote from being used in environments which don't have Getopt::Long
+installed. I might add this later.
 
 Options:
 
