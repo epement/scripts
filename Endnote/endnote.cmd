@@ -1,7 +1,7 @@
 @echo off
 :: filename: endnote.cmd (Windows CMD batch file to use Endnote easily)
 ::   author: Eric Pement
-::  updated: 2026-01-11 01:01:23 (UTC-0500)
+::  updated: 2026-01-11 01:34:08 (UTC-0500)
 ::
 :: Requires all the following:
 ::   where.exe : included on Windows Server 2003, Vista, Windows 7, and later
@@ -269,6 +269,4 @@ set EN_PATH_TO_PERL=
 set EN_PERL_SCRIPT=
 set EN_REQUIRE=
 set EN_SCRIPT=
-echo DIAG FINAL:
-set EN
 exit /b
