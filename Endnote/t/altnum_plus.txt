@@ -1,0 +1,13 @@
+Test for alternate numbering
+ + apple
+ + banana
+ + carrot
+ + date
+ + eggplant
+
+Done again
+ % dog
+ % cat
+ % monkey
+
+(end of file)
